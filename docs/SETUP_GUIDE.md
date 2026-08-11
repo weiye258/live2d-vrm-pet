@@ -57,24 +57,27 @@ setx ELECTRON_MIRROR https://npmmirror.com/mirrors/electron/
 
 > 第 2 条 `setx` 是给 Electron 二进制加速的，不设也能装，就是慢。
 
-## 4. 配置 API Key
+## 4. 配置 API Key（在设置界面填，不用手改 json）
+
+**不用拿记事本去编辑 json 填 Key**——桌宠设置窗口里有专门的 API 配置表单，是官方填法。
+
+第 1 步，生成配置文件（复制一份示例，程序要用，就一条命令）：
 
 ```bat
 copy config.example.json config.json
 ```
 
-用记事本编辑 `config.json`，在 `api` 段填 Key：
+第 2 步，先把桌宠启动起来（见第 5 节），然后在设置界面填 Key：
 
-```json
-"api": {
-  "base": "https://api.deepseek.com/v1",
-  "key": "sk-你的key",
-  "model": "deepseek-chat"
-}
-```
+1. 在桌宠身上点右键（或右下角托盘图标）→ 打开 **设置** 窗口；
+2. 找到 **API 配置** 区域，有三个输入框：Base URL、API Key、模型名；
+3. 按默认 DeepSeek 填：
+   - Base URL：`https://api.deepseek.com/v1`；
+   - API Key：在 platform.deepseek.com 申请的那串（sk- 开头）；
+   - 模型名：`deepseek-chat`；
+4. 点 **保存配置**，按钮变成"已保存 ✓"即成功。
 
-- 默认走 DeepSeek（key 在 platform.deepseek.com 申请）；
-- 任意 OpenAI 兼容接口都行；设置界面里也能配多个并切换。
+> 支持任意 OpenAI 兼容接口；可配置多个 API 服务并切换（API 预设功能）。注意 API Key 是敏感信息，别发给别人、别提交到仓库。
 
 ## 5. 启动桌宠（核心验收，必须过）
 
