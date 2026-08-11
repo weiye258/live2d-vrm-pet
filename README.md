@@ -100,9 +100,9 @@ npm start        # 或双击 start.bat
 
 ### 自定义模型
 
-1. 将 Live2D 模型（.model3.json 或 .model.json）放入 `models/` 目录
-2. 设置 → Live2D 模型 → 自定义路径填 `models/你的模型/xxx.model3.json` → 添加到列表
-3. 在列表选中 → 应用
+**Live2D**：将模型（.model3.json 或 .model.json）放入 `models/` 目录 → 设置 → Live2D / VRM 模型 → 自定义路径填 `models/你的模型/xxx.model3.json` → 添加到列表 → 选中 → 应用。
+
+**VRM**：将 `.vrm` 文件放入 `models/vrm/` → 设置 → Live2D / VRM 模型 → 自定义路径填 `models/vrm/xxx.vrm` → 添加到列表 → 选中 → 应用。VRM 用滚轮缩放、右键拖动位置（自动记忆）。
 
 ### 词→动作/表情触发
 

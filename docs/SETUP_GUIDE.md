@@ -117,7 +117,27 @@ netstat -ano | findstr "8766"
 - 模型下载慢/失败 → 设代理，或设 `HF_ENDPOINT=https://hf-mirror.com` 后重跑 `start.bat`；
 - 8766 被占用 → 改 `funasr/gf_live2d_asr_server.py` 顶部的端口变量，并把设置里 STT 地址改成一致。
 
-## 7. 可选：语音输出（OmniVoice TTS，秋叶整合包，人类手动下载）
+## 7. 可选：换模型（Live2D / VRM）
+
+仓库自带三个 Live2D 官方示例（haru / koharu / shizuku），克隆即可用，桌宠默认 haru。想换模型有两种方式：
+
+**方式 A：加 Live2D 模型**
+1. 把 Live2D 模型目录放进 `models/`（如 `models/xxx/`，其中含 `xxx.model3.json` 或 `xxx.model.json`）；
+2. 桌宠 **设置 → Live2D / VRM 模型**：自定义路径填 `models/xxx/xxx.model3.json` → 点"添加到列表"；
+3. 在列表里选中 → 点"应用"，桌宠立即切换。
+
+**方式 B：加 VRM 模型（3D 立绘）**
+1. 让人类从 VRoid Hub 等网站下载喜欢的 VRM 模型（`.vrm` 单文件，几 MB 到几十 MB）；
+2. 把 `.vrm` 文件放进 `models/vrm/`（如 `models/vrm/我的角色.vrm`）；
+3. 桌宠 **设置 → Live2D / VRM 模型**：自定义路径填 `models/vrm/我的角色.vrm` → 点"添加到列表" → 选中 → 点"应用"。
+
+VRM 模型的操作和 Live2D 略有不同：
+- **滚轮**缩放大小，**鼠标右键拖动**调整位置（位置会自动记住，重启不丢）；
+- 触摸区域、动作/表情触发等按模型分开保存，切换模型互不影响。
+
+> 注意：`models/vrm/` 在 `.gitignore` 里（体积大/版权不明，不入库），克隆仓库后该目录为空，需人类自己放文件，属正常。
+
+## 8. 可选：语音输出（OmniVoice TTS，秋叶整合包，人类手动下载）
 
 **为什么不能自动装**：整合包自带 Python 环境、模型权重和编译好的加速组件，几十 GB 级别，只能由整合包作者分发的压缩包提供。仓库层面没有任何安装脚本，不要试图现场部署或 pip 装。
 
@@ -136,14 +156,14 @@ netstat -ano | findstr "9881"
 
 硬性前提：**NVIDIA 显卡（CUDA）**。没有独显基本跑不动，建议直接放弃 TTS，改用打字 + 语音输入。
 
-## 8. 全部验收清单
+## 9. 全部验收清单
 
 - [ ] 桌宠出现，能正常聊天
 - [ ] 设置页能切换模型（Live2D 与 VRM 均可）
 - [ ] 可选：装了 STT，说话能识别成文字
 - [ ] 可选：装了 TTS，桌宠能开口说话
 
-## 9. 故障排查速查表
+## 10. 故障排查速查表
 
 | 症状 | 处理 |
 |---|---|
@@ -155,10 +175,10 @@ netstat -ano | findstr "9881"
 | TTS 没声音 | 确认整合包就绪、TTS 地址端口与整合包一致、系统音量与默认播放设备 |
 | 语音服务都正常但桌宠静音 | 检查系统"声音设置"的默认输出设备与音量 |
 
-## 10. 边界与注意事项
+## 11. 边界与注意事项
 
 - `.gitignore` 已排除的文件克隆后**不会出现**，属正常，别当成缺文件：`config.json`（含 API Key）、`characters/`（角色卡）、`chat-history/`、`memories/`（隐私数据）、`models/vrm/`（用户自放模型）、`models/blhx_z23/`（商业游戏资产，勿分发）、`funasr/models_cache/`（模型缓存，首次启动自动下载）。
 - 角色卡、聊天记录、记忆是用户隐私，**不要**提交到公开仓库。
-- 仓库自带 Live2D 官方示例模型（haru / koharu / shizuku），克隆即可用；VRM 模型需人类自己放文件到 `models/vrm/`。
+- 仓库自带 Live2D 官方示例模型（haru / koharu / shizuku），克隆即可用；加自选 Live2D / VRM 模型的完整步骤见第 7 节。
 - 改完配置后要重启桌宠才生效（`npm start` 每次都是全新进程，无热重载）。
 - 模型加载完成前，TTS/STT 开关可以先开着，服务就绪后即自动可用。
