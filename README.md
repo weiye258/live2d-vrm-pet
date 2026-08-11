@@ -8,7 +8,7 @@
 - 💬 聊天对话（OpenAI 兼容 API，默认 DeepSeek）
 - 🎭 多角色卡：每个角色独立人设、模型、语音、记忆
 - 🧠 记忆系统：事实/事件/物品/喜好自动沉淀
-- 🎤 TTS 语音输出（OmniVoice）+ STT 语音输入（FunASR）
+- 🎤 TTS 语音输出（OmniVoice）+ STT 语音输入（FunASR）+完全本地、低配置电脑也能运行。
 - 👁 视线跟随鼠标 + 自主小动作 + 自主找话题（可开关）
 - 🎬 词→动作/表情触发：配置关键词，文本中出现即播放对应动作
 - 🪟 独立窗口：聊天/角色/设置/记忆 均可独立弹出
@@ -22,22 +22,6 @@ npm install
 ```
 
 ### 2. 配置 API
-
-```bash
-copy config.example.json config.json
-```
-
-编辑 `config.json`，填入你的 API Key：
-
-```json
-{
-  "api": {
-    "base": "https://api.deepseek.com/v1",
-    "key": "sk-你的key",
-    "model": "deepseek-chat"
-  }
-}
-```
 
 > 支持任意 OpenAI 兼容接口。可在设置界面配置多个 API 服务并切换。
 
@@ -100,9 +84,9 @@ npm start        # 或双击 start.bat
 
 ### 自定义模型
 
-**Live2D**：将模型（.model3.json 或 .model.json）放入 `models/` 目录 → 设置 → Live2D / VRM 模型 → 自定义路径填 `models/你的模型/xxx.model3.json` → 添加到列表 → 选中 → 应用。
-
-**VRM**：将 `.vrm` 文件放入 `models/vrm/` → 设置 → Live2D / VRM 模型 → 自定义路径填 `models/vrm/xxx.vrm` → 添加到列表 → 选中 → 应用。VRM 用滚轮缩放、右键拖动位置（自动记忆）。
+1. 将 Live2D 模型（.model3.json 或 .model.json）放入 `models/` 目录
+2. 设置 → Live2D 模型 → 自定义路径填 `models/你的模型/xxx.model3.json` → 添加到列表
+3. 在列表选中 → 应用
 
 ### 词→动作/表情触发
 
