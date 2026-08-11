@@ -51,14 +51,44 @@ npm start        # 或双击 start.bat
 
 ## 可选：语音服务（TTS/STT）
 
-本项目不自带语音服务，需单独启动：
+语音不是必需功能：不配置也能正常聊天（打字）。语音服务需单独启动，项目仓库自带 FunASR 流式服务脚本（`funasr/`），按下面步骤配置即可。
 
-| 服务 | 用途 | 默认地址 |
-|------|------|----------|
-| [OmniVoice](https://github.com/Omni-Voice/OmniVoice) | TTS 语音合成 | http://127.0.0.1:9881 |
-| [FunASR](https://github.com/modelscope/FunASR) | STT 语音识别 | http://127.0.0.1:8766 |
+| 服务 | 用途 | 默认地址 | 仓库自带 |
+|------|------|----------|----------|
+| [OmniVoice](https://github.com/Omni-Voice/OmniVoice) | TTS 语音合成（她说） | http://127.0.0.1:9881 | 否，用秋叶整合包 |
+| [FunASR](https://github.com/modelscope/FunASR) | STT 语音识别（听你说） | http://127.0.0.1:8766 | 是（`funasr/`） |
 
-在设置界面的"语音"区块填入服务地址，开启对应开关即可。
+### STT 语音输入（FunASR）安装（小白版）
+
+1. 安装 Python 3.10 或 3.11（[官网下载](https://www.python.org/downloads/)），安装时**务必勾选 "Add Python to PATH"**；
+2. 双击 `funasr/install.bat` 安装依赖（有 NVIDIA 显卡选 y 装 GPU 版，更快；没有就选 n 装 CPU 版，也能用）。装完关闭窗口；
+3. 双击 `funasr/start.bat` 启动语音服务：首次启动会自动下载识别模型（约 1GB），出现 `server ready` 即成功。**这个窗口不要关**，关掉语音就没了；
+4. 桌宠设置 → 语音 → STT 地址填 `http://127.0.0.1:8766` → 打开"语音输入"开关；
+5. 重启桌宠后对她说说话试试。
+
+> 提示：`start.bat` 会自动检测 Python 并启动服务，无需改任何路径；模型缓存在 `funasr/models_cache/`，删掉可重新下载。
+
+### TTS 语音输出（OmniVoice，可选）
+
+让桌宠"开口说话"。OmniVoice 使用 **B 站秋叶出品的 AI 语音整合包**（自带一键启动脚本，无需手动部署）：
+
+1. 在 B 站搜索"秋叶 OmniVoice"下载整合包（或直接向作者要整合包压缩包）；
+2. 解压后，按整合包自带说明/一键启动脚本启动语音服务；
+3. 等黑窗口提示模型加载完成、服务就绪；
+4. 桌宠设置 → 语音 → TTS 地址填 `http://127.0.0.1:9881` → 选音色 → 打开"语音输出"开关；
+5. 若整合包实际端口不是 9881，以它为准修改地址。
+
+> 注意：OmniVoice 依赖 NVIDIA 显卡（CUDA）。没有独显的电脑大概率跑不动，建议只用打字 + 语音输入。
+> **给 AI 助手**：完整安装/排查步骤见 [AI 部署指引](docs/SETUP_GUIDE.md)。直接把本仓库链接发给你的 AI 助手，让它照着手册引导你安装。
+
+### 常见语音问题
+
+- **启动 `start.bat` 提示找不到 Python**：说明没勾 PATH。重装 Python 勾选 "Add Python to PATH"，或手动把 Python 安装目录加入系统环境变量 PATH；
+- **模型下载慢/失败**：设置系统环境变量 `HF_ENDPOINT=https://hf-mirror.com` 后重试；或使用代理；
+- **8766 端口被占用**：修改 `funasr/gf_live2d_asr_server.py` 顶部 `GF_ASR_PORT` 环境变量（或直接改 `PORT`），并把桌宠设置里的 STT 地址改成对应端口；
+- **识别不准**：靠近麦克风、环境安静；桌面宠用的是 16k 采样率麦克风流；
+- **TTS 没有声音/服务未就绪**：确认整合包已按说明启动且模型加载完成；服务端口以整合包实际为准，与桌宠设置里的地址保持一致；
+- **说话没声音但服务正常**：检查系统音量、默认播放设备。
 
 ## 使用说明
 
@@ -103,6 +133,7 @@ live2d-pet/
 ├── characters/        # 角色卡（JSON）
 ├── chat-history/      # 聊天记录（每角色一个文件）
 ├── memories/          # 记忆文件（每角色一个文件）
+├── funasr/            # 语音输入服务（可选）：install.bat 装依赖、start.bat 启动
 └── models/            # Live2D 模型
 ```
 

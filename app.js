@@ -20,6 +20,7 @@ let pixiApp = null;
 let live2dModel = null;
 let vrmAdapter = null;    // VRM 渲染适配器实例（VRMAdapter 类）
 let activeModelType = ''; // 'live2d' | 'vrm' | ''（当前激活的模型类型）
+let vrmOffset = { x: 0, y: 0 }; // VRM 模型在画面中的位置偏移（右键拖拽调整，可持久化）
 let _dragDownPt = null;      // 拖拽起点（Live2D 和 VRM 共用）
 let _dragDragging = false;   // 正在拖拽
 let synthOn = false;
@@ -277,6 +278,17 @@ function normalizePart(part) {
   return m[part] || 'other';
 }
 
+// 当前模型应命中的触摸区域：优先按模型路径匹配 zonesByModel，回退默认(__default__)，再回退旧版全局 zones
+function currentZones() {
+  const t = (touchCfg && typeof touchCfg === 'object') ? touchCfg : DEFAULT_TOUCH;
+  const byModel = (t.zonesByModel && typeof t.zonesByModel === 'object') ? t.zonesByModel : null;
+  if (byModel) {
+    if (activeCharModel && Array.isArray(byModel[activeCharModel])) return byModel[activeCharModel];
+    if (Array.isArray(byModel.__default__)) return byModel.__default__;
+  }
+  return Array.isArray(t.zones) ? t.zones : [];
+}
+
 // 命中检测：优先匹配用户自定义触摸区域(touchCfg.zones)，再回退模型 HitArea / 包围盒
 function hitTestPart(e) {
   if (!pixiApp) return null;
@@ -284,7 +296,7 @@ function hitTestPart(e) {
   const nx = e.clientX / window.innerWidth;
   const ny = e.clientY / window.innerHeight;
   const aspect = window.innerHeight / window.innerWidth;
-  const zones = (touchCfg && touchCfg.zones && Array.isArray(touchCfg.zones)) ? touchCfg.zones : [];
+  const zones = currentZones();
   let best = null, bestDist = Infinity;
   for (const z of zones) {
     if (typeof z.x !== 'number' || typeof z.y !== 'number' || typeof z.r !== 'number') continue;
@@ -494,6 +506,8 @@ async function loadModel(modelPath) {
         vrmCanvasEl.removeEventListener('pointerdown', onPokePointerDown);
         vrmCanvasEl.addEventListener('pointerdown', onPokePointerDown);
       }
+      // 加载完成后应用持久化的缩放与位置偏移（loadConfig 早于 VRM 加载完成，这里补上）
+      positionModel();
 
     } else {
       // ============ Live2D 模型 ============
@@ -560,9 +574,10 @@ async function loadModel(modelPath) {
 const BASE_WIN_W = 520, BASE_WIN_H = 580;
 
 function positionModel() {
-  // VRM 模型：通过 adapter 的 setZoom 控制
+  // VRM 模型：通过 adapter 的 setZoom 控制（同时应用右键拖拽的位置偏移）
   if (activeModelType === 'vrm' && vrmAdapter) {
     vrmAdapter.setZoom(zoomLevel);
+    vrmAdapter.setOffset(vrmOffset.x, vrmOffset.y);
     refreshLayout();
     return;
   }
@@ -714,12 +729,52 @@ function setupFrameResize() {
   window.addEventListener('pointercancel', () => { active = null; });
 }
 
-// 滚轮缩放（在画布上滚动）
-canvasWrap.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const delta = e.deltaY > 0 ? -0.05 : 0.05;
-  setZoom(zoomLevel + delta);
-}, { passive: false });
+// 滚轮缩放（在画布上滚动；Live2D 画布与 VRM 画布是两个容器，都要监听）
+['canvas-wrap', 'vrm-canvas-wrap'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    setZoom(zoomLevel + delta);
+  }, { passive: false });
+});
+
+// ===== VRM 右键拖拽调整人物在画面中的位置（按住右键拖动，松手自动保存） =====
+const vrmDrag = { active: false, sx: 0, sy: 0, moved: false };
+const vrmWrapEl = document.getElementById('vrm-canvas-wrap');
+if (vrmWrapEl) {
+  vrmWrapEl.addEventListener('pointerdown', (e) => {
+    if (activeModelType !== 'vrm' || !vrmAdapter) return;
+    if (e.button !== 2) return;   // 仅右键
+    e.preventDefault();
+    vrmDrag.active = true; vrmDrag.sx = e.clientX; vrmDrag.sy = e.clientY; vrmDrag.moved = false;
+  });
+}
+window.addEventListener('pointermove', (e) => {
+  if (!vrmDrag.active || !vrmAdapter) return;
+  const dx = e.clientX - vrmDrag.sx, dy = e.clientY - vrmDrag.sy;
+  if (!vrmDrag.moved && Math.abs(dx) + Math.abs(dy) < 5) return;   // 5px 内视为点击，不拖
+  vrmDrag.moved = true;
+  vrmOffset = vrmAdapter.offsetByScreen(dx, dy);
+  vrmDrag.sx = e.clientX; vrmDrag.sy = e.clientY;
+});
+window.addEventListener('pointerup', () => {
+  if (!vrmDrag.active) return;
+  vrmDrag.active = false;
+  if (!vrmDrag.moved) return;
+  // 松手持久化位置偏移（重启后保持）
+  try {
+    fetch('/api/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vrmOffset })
+    }).catch(() => {});
+  } catch (err) {}
+});
+// VRM 模式下禁用右键菜单（右键专用于拖拽调整位置）
+window.addEventListener('contextmenu', (e) => {
+  if (activeModelType === 'vrm') e.preventDefault();
+});
 
 // IPC：接收主进程的缩放指令
 if (ipcRenderer) {
@@ -1685,6 +1740,10 @@ async function loadConfig() {
       const lbl = document.getElementById('zoomLabel');
       if (lbl) lbl.textContent = Math.round(zoomLevel * 100) + '%';
     }
+    // 恢复 VRM 模型位置偏移（右键拖拽调整的）
+    if (config.vrmOffset && typeof config.vrmOffset === 'object') {
+      vrmOffset = { x: Number(config.vrmOffset.x) || 0, y: Number(config.vrmOffset.y) || 0 };
+    }
     // 应用缩放：让整个窗口随 zoomLevel 变大/变小（main.js 保持中心、夹屏），
     // 否则启动后窗口仍是基准 520x580、人物偏小且自定义区域坐标对不上
     try { setZoom(zoomLevel); } catch (e) {}
@@ -1707,6 +1766,7 @@ function getMotionActionOptions() {
 function collectModelActions() {
   return {
     loaded: !!(live2dModel || activeModelType === 'vrm'),
+    path: activeCharModel,           // 当前模型路径，设置页据此绑定触摸区域
     groups: getMotionGroups(),
     ungrouped: getUngroupedMotionNames(),
     expressions: getExpressionNames()

@@ -21,7 +21,7 @@
     box-shadow: var(--shadow-soft); cursor: grab;
   }
   #dock:active { cursor: grabbing; }
-  #dock .dbtn, #dock .dock-sep, #dock #zoomLabel { cursor: pointer; }
+  #dock .dbtn, #dock .dock-sep { cursor: pointer; }
   /* 收起后的小圆点 */
   #dot {
     display: none;
@@ -49,9 +49,6 @@
   <button class="dbtn" id="charBtn" title="角色">🎭</button>
   <div class="dock-sep"></div>
   <button class="dbtn" id="ghostBtn" title="透视：鼠标可穿透模型，操作后面的文件">👁</button>
-  <button class="dbtn sm" id="zoomOutBtn" title="缩小">−</button>
-  <span id="zoomLabel">100%</span>
-  <button class="dbtn sm" id="zoomInBtn" title="放大">+</button>
   <div class="dock-sep"></div>
   <button class="dbtn" id="collapseBtn" title="收起成一个小圆点">—</button>
 </div>
@@ -67,8 +64,6 @@
   $('charBtn').addEventListener('click', () => send('open-characters-window'));
   $('voiceBtn').addEventListener('click', () => send('toggle-voice'));
   $('ghostBtn').addEventListener('click', () => send('toggle-ghost'));
-  $('zoomInBtn').addEventListener('click', () => send('zoom', 0.1));
-  $('zoomOutBtn').addEventListener('click', () => send('zoom', -0.1));
 
   // 收起为小圆点 / 点击圆点展开（窗口尺寸由主进程调整）
   const dockEl = document.getElementById('dock');
@@ -94,13 +89,12 @@
   });
   ipcRenderer.on('ghost-state', (e, v) => { const b = $('ghostBtn'); if (b) b.classList.toggle('active', !!v); });
   ipcRenderer.on('voice-state', (e, v) => { const b = $('voiceBtn'); if (b) b.classList.toggle('active', !!v); });
-  ipcRenderer.on('zoom-state', (e, pct) => { const l = $('zoomLabel'); if (l) l.textContent = pct + '%'; });
 
   // 拖拽整个浮窗（透明窗下 -webkit-app-region 不可靠，用 IPC；按钮区域不触发拖拽）
   // 小圆点也参与拖拽：按下即进入拖动，松手时若几乎没移动则视为点击展开
   let dragging = false;
   document.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.dbtn') || e.target.closest('.dock-sep') || e.target.id === 'zoomLabel') return;
+    if (e.target.closest('.dbtn') || e.target.closest('.dock-sep')) return;
     dotPress = e.target.id === 'dot' ? { x: e.clientX, y: e.clientY } : null;
     dragging = true; send('dock-drag-start'); e.preventDefault();
   });

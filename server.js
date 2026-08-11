@@ -35,6 +35,7 @@ let config = {
   autoReplyDelay: 40,       // 自动找话题：用户无互动多少秒后角色主动开口（5~600）
   autoReplyMaxCount: 5,     // 自动找话题：连续主动开口最多几次（0~50，0=不限制）
   ghostOpacity: 40,         // 透视模式下人物透明度（%）10~90
+  vrmOffset: { x: 0, y: 0 }, // VRM 模型在画面中的位置偏移（右键拖拽）
   globalRules: [],
   port: 8740,
   models: [],
@@ -1106,14 +1107,28 @@ const server = http.createServer(async (req, res) => {
         const z = Number(patch.zoomLevel);
         if (!isNaN(z)) config.zoomLevel = Math.round(Math.max(0.3, Math.min(3.0, z)) * 100) / 100;
       }
+      // VRM 模型在画面中的位置偏移（右键拖拽调整）
+      if (patch.vrmOffset !== undefined && patch.vrmOffset && typeof patch.vrmOffset === 'object') {
+        config.vrmOffset = {
+          x: Math.round((Number(patch.vrmOffset.x) || 0) * 1000) / 1000,
+          y: Math.round((Number(patch.vrmOffset.y) || 0) * 1000) / 1000
+        };
+      }
       // 触摸身体发语音开关
       if (patch.pokeSpeak !== undefined) config.pokeSpeak = !!patch.pokeSpeak;
       // 触摸手势配置：阈值 + 用户自定义区域（9 部位默认词已移除，全部由自定义区域决定）
       if (patch.touch !== undefined && patch.touch && typeof patch.touch === 'object') {
         const t = patch.touch;
+        // 按模型保存触摸区域：保留已有 zonesByModel，仅更新本次携带的键
+        const oldByModel = (config.touch && config.touch.zonesByModel && typeof config.touch.zonesByModel === 'object')
+          ? config.touch.zonesByModel : {};
+        const newByModelRaw = (t.zonesByModel && typeof t.zonesByModel === 'object') ? t.zonesByModel : {};
+        const newByModel = {};
+        for (const k of Object.keys(newByModelRaw)) newByModel[k] = sanitizeTouchZones(newByModelRaw[k]);
         config.touch = {
           holdMs: Math.max(200, Math.min(3000, Number(t.holdMs) || 500)),
           doubleMs: Math.max(100, Math.min(1000, Number(t.doubleMs) || 300)),
+          zonesByModel: Object.assign({}, oldByModel, newByModel),
           zones: sanitizeTouchZones(t.zones)
         };
       }

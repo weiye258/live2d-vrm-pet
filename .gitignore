@@ -31,6 +31,10 @@ models/blhx_z23/
 # ---- 用户下载的 VRM 模型（体积大/版权不明，不入库）----
 models/vrm/
 
+# ---- FunASR 语音识别模型缓存（约 1GB，首次启动下载，不入库）----
+funasr/models_cache/
+funasr/__pycache__/
+
 # ---- 系统 / 编辑器 ----
 .DS_Store
 Thumbs.db

@@ -251,13 +251,13 @@ input[type="range"] { width: 100%; accent-color: #ff9db4; margin: 4px 0; }
 </div>
 
 <div class="sec">
-  <div class="sec-t">Live2D 模型</div>
+  <div class="sec-t">Live2D / VRM 模型</div>
   <select id="modelSelect"></select>
   <div class="btn-row">
     <button class="mini-btn primary" id="modelApply">应用</button>
     <button class="mini-btn" id="modelDelCustom">移除</button>
   </div>
-  <input id="customModelPath" placeholder="自定义路径（如 models/xxx.model3.json）" />
+  <input id="customModelPath" placeholder="自定义路径（项目 models 目录内，如 models/vrm/xxx.vrm 或 models/xxx.model3.json）" />
   <button class="mini-btn" id="modelAddCustom" style="width:100%">+ 添加到列表</button>
 </div>
 
@@ -298,7 +298,8 @@ input[type="range"] { width: 100%; accent-color: #ff9db4; margin: 4px 0; }
 
 <div class="sec">
   <div class="sec-t">触摸区域（自定义部位圈选）</div>
-  <div class="hint">先点「刷新预览」截取当前宠物，在图上点一下就是圆心、拖动圆边调半径；右侧填<b>部位名（可任意自定义，如 辫子、头发、脸颊）</b>并填轻触/双击/长按各发什么词。圈内的触摸用这里的设定；圈外未匹配则不发词（只做动作）。半径按窗口宽度百分比计，列表里会显示。</div>
+  <div id="zoneModelTag" class="hint">当前模型：默认（所有模型共用）</div>
+  <div class="hint">先点「刷新预览」截取当前宠物，在图上点一下就是圆心、拖动圆边调半径；右侧填<b>部位名（可任意自定义，如 辫子、头发、脸颊）</b>并填轻触/双击/长按各发什么词。圈内的触摸用这里的设定；圈外未匹配则不发词（只做动作）。半径按窗口宽度百分比计，列表里会显示。<b>区域会按上方「Live2D / VRM 模型」里选中的模型分别保存</b>：换模型后自动切换对应的圈选。</div>
   <div class="toggle-row">
     <label class="mini-label" for="touchHoldMs">长按阈值(ms)</label>
     <input id="touchHoldMs" type="number" min="200" max="3000" style="max-width:90px" />
@@ -390,10 +391,9 @@ async function loadConfig() {
     renderTriggerList(config.motionTriggers || []);
     renderCurrentChar();
     loadTouchThresholds();
-    // 载入自定义触摸区域到工作副本
-    zonesWorking = (config.touch && Array.isArray(config.touch.zones))
-      ? JSON.parse(JSON.stringify(config.touch.zones)) : [];
-    renderZoneList();
+    // 载入自定义触摸区域到工作副本（默认先按「未绑定模型」加载，收到 model-actions 后按当前模型刷新）
+    touchModelKey = '';
+    loadZonesWorking();
     loadModelList();
     loadApiPresets();
     loadTtsSpeakers();
@@ -693,13 +693,27 @@ function renderCurrentChar() {
 // 收到主窗推送：刷新可用列表，并按最新角色同步保存列表（人物个性化）
 if (ipcRenderer) ipcRenderer.on('model-actions', async (e, d) => {
   if (d) renderModelActions(d);
+  // 同步当前生效模型 → 触摸区域绑定到该模型（自动选中下拉并载入对应圈选）
+  if (d && typeof d.path === 'string') {
+    touchModelKey = d.path;
+    const sel = $('modelSelect');
+    if (sel) {
+      if ([...sel.options].some(o => o.value === d.path)) sel.value = d.path;
+      loadZonesWorking();
+    }
+  }
   try {
     const r = await fetch('/api/config');
     const fresh = await r.json();
     config = fresh;
     renderTriggerList(config.motionTriggers || []);
     renderCurrentChar();
-  } catch (err) {}
+  } catch (e) {}
+});
+// 用户手动切换模型下拉 → 触摸区域跟随切换到该模型自己的圈选（未保存的当前草稿会被替换，属预期）
+$('modelSelect').addEventListener('change', () => {
+  touchModelKey = $('modelSelect').value || '';
+  loadZonesWorking();
 });
 // 角色切换通知：立即按最新角色刷新保存列表（不依赖主窗重载模型成功）
 if (ipcRenderer) ipcRenderer.on('character-changed', async () => {
@@ -766,16 +780,38 @@ function loadTouchThresholds() {
 
 // ============ 触摸区域（自定义部位圈选，部位名可任意自定义） ============
 let zonesWorking = [];
+let touchModelKey = '';   // 当前触摸区域绑定的模型路径；'' = 默认（所有模型共用）
 let snap = null;       // { dataUrl, w, h }
+
+// 按当前绑定的模型加载区域：zonesByModel[模型] > __default__ > 旧版全局 zones
+function loadZonesWorking() {
+  const t = getTouchCfg();
+  const byModel = (t.zonesByModel && typeof t.zonesByModel === 'object') ? t.zonesByModel : {};
+  let list = [];
+  if (touchModelKey && Array.isArray(byModel[touchModelKey])) list = byModel[touchModelKey];
+  else if (Array.isArray(byModel.__default__)) list = byModel.__default__;
+  else if (Array.isArray(t.zones)) list = t.zones;
+  zonesWorking = JSON.parse(JSON.stringify(list));
+  renderZoneList();
+  const tag = $('zoneModelTag');
+  if (tag) tag.textContent = touchModelKey ? ('当前模型：' + touchModelKey) : '当前模型：默认（所有模型共用）';
+}
 let selIdx = -1;
 let zoneDrag = null;   // { mode:'move'|'resize', idx }
 
 // 拼出完整 touch 配置（9 部位词 + 阈值 + 自定义区域），两处保存共用
+// 区域按当前绑定的模型写入 zonesByModel，互不干扰；zones 保留旧全局兜底
 function buildFullTouch() {
+  const old = getTouchCfg();
+  const byModel = (old.zonesByModel && typeof old.zonesByModel === 'object')
+    ? JSON.parse(JSON.stringify(old.zonesByModel)) : {};
+  const key = touchModelKey || '__default__';
+  byModel[key] = (zonesWorking && zonesWorking.length) ? JSON.parse(JSON.stringify(zonesWorking)) : [];
   return {
     holdMs: Math.max(200, Math.min(3000, Number($('touchHoldMs').value) || 500)),
     doubleMs: Math.max(100, Math.min(1000, Number($('touchDoubleMs').value) || 300)),
-    zones: (zonesWorking && zonesWorking.length) ? zonesWorking : (getTouchCfg().zones || [])
+    zonesByModel: byModel,
+    zones: (zonesWorking && zonesWorking.length) ? zonesWorking : (old.zones || [])
   };
 }
 

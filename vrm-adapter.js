@@ -39,6 +39,8 @@ class VRMRenderer {
     this._gazeTarget = { x: 0, y: 0 };
     this._lipSyncValue = 0;
     this._zoomLevel = 1.0;
+    this._offsetX = 0;   // 模型在画面中的水平偏移（世界单位，正交相机下 = 画面平移）
+    this._offsetY = 0;   // 模型在画面中的垂直偏移
     this._idleEnabled = true;
     this._gazeEnabled = true;
 
@@ -310,12 +312,26 @@ class VRMRenderer {
     this.camera.top = frustum; this.camera.bottom = -frustum;
     const box = new THREE.Box3().setFromObject(this.vrm.scene);
     const center = new THREE.Vector3(); box.getCenter(center);
-    this.camera.position.set(center.x, center.y, 5);
+    // 相机平移 = 画面平移：模型显示位置由用户拖拽的偏移决定，视线仍对准模型中心
+    this.camera.position.set(center.x + this._offsetX, center.y + this._offsetY, 5);
     this.camera.lookAt(center);
     this.camera.updateProjectionMatrix();
   }
 
   setZoom(level) { this._zoomLevel = Math.max(0.3, Math.min(5.0, level)); this._fitCamera(); }
+  setOffset(x, y) { this._offsetX = Number(x) || 0; this._offsetY = Number(y) || 0; this._fitCamera(); }
+  getOffset() { return { x: this._offsetX, y: this._offsetY }; }
+  // 按屏幕像素增量移动模型位置（正交相机：换算世界单位），返回最新偏移
+  offsetByScreen(dx, dy) {
+    const w = this.canvas.clientWidth || window.innerWidth;
+    const h = this.canvas.clientHeight || window.innerHeight;
+    const aspect = w / h;
+    const frustum = ((this._modelHeight || 2.0) / 0.55) / this._zoomLevel;
+    this._offsetX += (dx / w) * frustum * aspect * 2;
+    this._offsetY -= (dy / h) * frustum * 2;   // 屏幕 y 向下，世界 y 向上
+    this._fitCamera();
+    return { x: this._offsetX, y: this._offsetY };
+  }
   setGaze(nx, ny) { this._gazeTarget.x = Math.max(-1, Math.min(1, nx)); this._gazeTarget.y = Math.max(-1, Math.min(1, ny)); }
   setIdleEnabled(v) { this._idleEnabled = !!v; }
   setGazeEnabled(v) { this._gazeEnabled = !!v; }
@@ -483,12 +499,11 @@ class VRMRenderer {
     const spine = getBoneNode(this.vrm.humanoid, 'spine');
     if (spine && ip.spine) spine.rotation.x = ip.spine.x + Math.sin(t * 1.2 + 0.3) * 0.03;
 
-    // 重心摇摆：臀部左右晃（明显）
+    // 重心：轻转身 + 微小的左右倾斜（不做左右平移，避免整体左右移动显得怪异）
     const hips = getBoneNode(this.vrm.humanoid, 'hips');
     if (hips && ip.hips) {
-      hips.rotation.z = ip.hips.z + Math.sin(t * 0.5) * 0.05;
+      hips.rotation.z = ip.hips.z + Math.sin(t * 0.5) * 0.02;
       hips.rotation.y = ip.hips.y + Math.sin(t * 0.3) * 0.03;
-      hips.position.x = Math.sin(t * 0.5) * 0.02;
     }
 
     // 手臂摆动（在自然下垂基础上明显摆动）
