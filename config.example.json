@@ -1,0 +1,40 @@
+{
+  "api": {
+    "base": "https://api.deepseek.com/v1",
+    "key": "",
+    "model": "deepseek-chat"
+  },
+  "tts": {
+    "enabled": false,
+    "base": "http://127.0.0.1:9881",
+    "speaker": "",
+    "emotion": ""
+  },
+  "stt": {
+    "enabled": false,
+    "funasr": "http://127.0.0.1:8766"
+  },
+  "activeCharacter": "助手",
+  "maxHistory": 50,
+  "autoReply": true,
+  "ghostOpacity": 40,
+  "globalRules": [],
+  "port": 8740,
+  "models": [
+    {
+      "path": "models/haru/haru_greeter_t03.model3.json",
+      "name": "haru_greeter_t03"
+    },
+    {
+      "path": "models/assets/koharu.model.json",
+      "name": "koharu"
+    },
+    {
+      "path": "models/assets/shizuku.model.json",
+      "name": "shizuku"
+    }
+  ],
+  "apis": [],
+  "motionTriggers": [],
+  "zoomLevel": 1.6
+}

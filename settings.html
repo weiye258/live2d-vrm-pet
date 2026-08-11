@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>设置</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: linear-gradient(160deg, #2a1b3d 0%, #3d2b52 60%, #4a3059 100%);
+  color: #e8ddf0;
+  min-height: 100vh;
+  padding: 18px;
+}
+h1 { font-size: 17px; margin-bottom: 14px; color: #ffd6e8; letter-spacing: 1px; }
+.sec {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.sec-t {
+  font-size: 13px;
+  color: #ffb9d0;
+  margin-bottom: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+input, textarea, select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e8ddf0;
+  font-size: 13px;
+  margin-bottom: 8px;
+  outline: none;
+  font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { border-color: #ff9db4; }
+textarea { resize: vertical; }
+select option { background: #2a1b3d; }
+.toggles { display: flex; gap: 8px; margin-bottom: 8px; }
+.tog {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #c9b8d8;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tog.on {
+  background: rgba(255, 157, 180, 0.25);
+  border-color: #ff9db4;
+  color: #ffd6e8;
+}
+.btn-row { display: flex; gap: 8px; }
+.btn-row .mini-btn { flex: 1; }
+.mini-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e8ddf0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mini-btn:hover { background: rgba(255, 255, 255, 0.18); }
+.mini-btn.primary {
+  background: rgba(255, 157, 180, 0.3);
+  border-color: #ff9db4;
+  color: #ffe4ee;
+}
+.mini-btn.primary:hover { background: rgba(255, 157, 180, 0.45); }
+.hint { font-size: 11px; color: #a893b8; margin-top: 6px; line-height: 1.5; }
+.toggle-row { margin-top: 10px; }
+.mini-label { font-size: 12px; color: #c9b8d8; display: block; margin-bottom: 6px; }
+.mini-label span { color: #ffd6e8; font-weight: 600; }
+input[type="range"] { width: 100%; accent-color: #ff9db4; margin: 4px 0; }
+.trigger-info {
+  font-size: 11px;
+  color: #a893b8;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.trigger-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.trigger-row input { flex: 1; margin-bottom: 0; }
+.trigger-row select { width: auto; margin-bottom: 0; max-width: 130px; }
+.trigger-row .mini-btn { padding: 5px 8px; }
+#triggerList { margin-top: 4px; }
+.touch-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 6px;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+.touch-label { font-size: 12px; color: #ffd6e8; min-width: 52px; flex-shrink: 0; }
+
+/* ================= 触摸区域（自定义部位圈选） ================= */
+.zone-preview {
+  margin-top: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-sm);
+  background: rgba(0,0,0,0.25);
+  padding: 6px;
+}
+.zone-img-wrap {
+  position: relative;
+  width: 100%;
+  max-height: 360px;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: rgba(0,0,0,0.18);
+}
+.zone-img-wrap img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+#zoneLayers { position: absolute; inset: 0; }
+.zone-empty {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-3); font-size: 12px; text-align: center; padding: 12px;
+}
+.zone-circle {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  box-sizing: border-box;
+  cursor: move;
+  background: rgba(255,143,199,0.08);
+}
+.zone-circle.sel { border-color: #fff; background: rgba(255,143,199,0.18); box-shadow: 0 0 10px rgba(255,143,199,0.5); }
+.zone-handle {
+  position: absolute; right: -7px; bottom: -7px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff;
+  cursor: nwse-resize;
+}
+.zone-rlabel {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-size: 11px; color: #fff; text-shadow: 0 0 4px rgba(0,0,0,0.6);
+  pointer-events: none; white-space: nowrap;
+}
+.zone-editor {
+  margin-top: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+}
+.zone-editor-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.zone-editor-row .mini-label { min-width: 40px; margin: 0; }
+.zone-editor-row input, .zone-editor-row select { flex: 1; margin-bottom: 0; min-width: 0; }
+.zone-list { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.zone-item {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04); border-radius: 8px; padding: 4px 8px;
+  cursor: pointer; font-size: 12px; color: var(--text-2);
+}
+.zone-item.sel { background: var(--accent-bg); color: #ffd6ec; }
+.zone-item .zi-part { color: #ffd6ec; font-weight: 600; }
+.zone-item .zi-r { color: #9fe6ff; font-size: 11px; }
+.zone-head { margin-top: 8px; font-size: 12px; color: var(--text); font-weight: 600; }
+.zone-head #zoneCount { color: #ffd6ec; }
+.zone-empty-hint { margin-top: 6px; font-size: 11px; color: var(--text-2); line-height: 1.5; background: rgba(255,255,255,0.04); border: 1px dashed var(--glass-border); border-radius: 8px; padding: 6px 8px; }
+</style>
+</head>
+<body>
+<h1>⚙ 设置</h1>
+
+<div class="sec">
+  <div class="sec-t">API 配置（OpenAI 兼容）</div>
+  <select id="apiPreset"><option value="">-- API 预设 --</option></select>
+  <div class="btn-row">
+    <button class="mini-btn" id="apiPresetLoad">载入</button>
+    <button class="mini-btn" id="apiPresetSave">存为预设</button>
+    <button class="mini-btn" id="apiPresetDel">删除</button>
+  </div>
+  <input id="apiBase" placeholder="Base URL（如 https://api.deepseek.com/v1）" />
+  <input id="apiKey" placeholder="API Key" type="password" />
+  <input id="apiModel" placeholder="模型名（如 deepseek-chat）" />
+  <input id="apiMaxTokens" type="number" min="64" max="16384" step="64" placeholder="回复最大 token 数（默认 800，64~16384）" />
+  <div class="hint">每次回复最多生成的 token 数，越大回答越长但更慢更费钱。</div>
+  <input id="apiInputMaxTokens" type="number" min="512" max="32768" step="512" placeholder="输入（上下文）最大 token 数（默认 6000，512~32768）" />
+  <div class="hint">每次发给模型的历史上下文 token 上限（含人设词）。超出会自动丢掉最早的对话、只保留最近的：调大=记得更多但更费钱，调小=省 token 但容易「失忆」。</div>
+  <button class="mini-btn primary" id="apiSave" style="width:100%">保存配置</button>
+</div>
+
+<div class="sec">
+  <div class="sec-t">全局规则书（作用于所有角色）</div>
+  <textarea id="globalRulesInput" rows="5" placeholder="一行一条规则。&#10;例：用户语音输入可能识别不准，遇到不通顺的话先确认再回答。&#10;例：任何时候不要提及你是 AI。"></textarea>
+  <button class="mini-btn primary" id="globalRulesSave" style="width:100%">保存规则书</button>
+</div>
+
+<div class="sec">
+  <div class="sec-t">行为</div>
+  <div class="toggles">
+    <button class="tog" id="autoReplyTog">自动找话题</button>
+    <button class="tog" id="walkTog">自动游走</button>
+    <button class="tog" id="idleAnimTog">小动作</button>
+  </div>
+  <div class="hint">「自动游走」开启后小人会在屏幕上自己溜达（碰边缘反弹）；关闭则停在最后位置。拖动小人时自动暂停，松手恢复。托盘/右键菜单的「切换自动游走」同样生效并记住。</div>
+  <div class="hint">开启后，长时间不互动她会主动开口找你聊天。</div>
+  <div id="autoReplyCfg" class="toggle-row" style="flex-direction:column;align-items:stretch;gap:10px;">
+    <div>
+      <label class="mini-label" for="autoReplyDelayRange">无互动 <span id="autoReplyDelayVal">40</span> 秒后主动开口</label>
+      <input id="autoReplyDelayRange" type="range" min="5" max="300" step="5" value="40" style="width:100%" />
+      <div class="hint">你停止说话/操作多少秒后，角色主动开口。范围 5~300 秒。</div>
+    </div>
+    <div>
+      <label class="mini-label" for="autoReplyMaxCountRange">连续主动开口最多 <span id="autoReplyMaxCountVal">5</span> 次</label>
+      <input id="autoReplyMaxCountRange" type="range" min="0" max="20" step="1" value="5" style="width:100%" />
+      <div class="hint">达到上限后她会安静等你回话。设为 0 = 不限制（一直主动开口）。</div>
+    </div>
+  </div>
+  <div class="toggle-row">
+    <label class="mini-label" for="ghostOpacityRange">透视透明度 <span id="ghostOpacityVal">40%</span></label>
+    <input id="ghostOpacityRange" type="range" min="10" max="90" value="40" />
+    <div class="hint">开启透视（👁）时人物整体半透明，鼠标可穿透点到桌面。</div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-t">Live2D 模型</div>
+  <select id="modelSelect"></select>
+  <div class="btn-row">
+    <button class="mini-btn primary" id="modelApply">应用</button>
+    <button class="mini-btn" id="modelDelCustom">移除</button>
+  </div>
+  <input id="customModelPath" placeholder="自定义路径（如 models/xxx.model3.json）" />
+  <button class="mini-btn" id="modelAddCustom" style="width:100%">+ 添加到列表</button>
+</div>
+
+<div class="sec">
+  <div class="sec-t">动作/表情触发（聊天中出现关键词时播放）</div>
+  <div id="curCharInfo" class="trigger-info" style="margin-bottom:4px"></div>
+  <div id="triggerModelInfo" class="trigger-info">当前模型动作/表情列表加载中…</div>
+  <div id="triggerList"></div>
+  <div class="btn-row">
+    <button class="mini-btn" id="triggerAdd">+ 添加触发</button>
+    <button class="mini-btn primary" id="triggerSave">保存触发配置</button>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-t">语音</div>
+  <div class="toggles">
+    <button class="tog" id="ttsTog">语音发声</button>
+    <button class="tog" id="sttTog">语音输入</button>
+    <button class="tog" id="pokeSpeakTog">触摸身体发语音</button>
+  </div>
+  <div class="hint">关闭后，戳人物身体/头只做动作反馈，不再触发大模型语音回复。</div>
+  <div class="toggle-row">
+    <label class="mini-label" for="ttsBaseInput">TTS 服务地址（输出语音，如 http://127.0.0.1:9881）</label>
+    <input id="ttsBaseInput" placeholder="http://127.0.0.1:9881" />
+  </div>
+  <div class="toggle-row">
+    <label class="mini-label" for="sttBaseInput">STT 服务地址（输入语音 FunASR，如 http://127.0.0.1:8766）</label>
+    <input id="sttBaseInput" placeholder="http://127.0.0.1:8766" />
+  </div>
+  <select id="ttsSpeaker"><option value="">-- 加载音色列表 --</option></select>
+  <div class="btn-row">
+    <button class="mini-btn primary" id="ttsSpeakerSave">保存音色</button>
+    <button class="mini-btn" id="ttsSpeakerReload">刷新列表</button>
+  </div>
+  <button class="mini-btn" id="voiceAddrSave" style="width:100%;margin-top:8px">保存语音服务地址</button>
+</div>
+
+<div class="sec">
+  <div class="sec-t">触摸区域（自定义部位圈选）</div>
+  <div class="hint">先点「刷新预览」截取当前宠物，在图上点一下就是圆心、拖动圆边调半径；右侧填<b>部位名（可任意自定义，如 辫子、头发、脸颊）</b>并填轻触/双击/长按各发什么词。圈内的触摸用这里的设定；圈外未匹配则不发词（只做动作）。半径按窗口宽度百分比计，列表里会显示。</div>
+  <div class="toggle-row">
+    <label class="mini-label" for="touchHoldMs">长按阈值(ms)</label>
+    <input id="touchHoldMs" type="number" min="200" max="3000" style="max-width:90px" />
+    <label class="mini-label" for="touchDoubleMs">双击窗口(ms)</label>
+    <input id="touchDoubleMs" type="number" min="100" max="1000" style="max-width:90px" />
+  </div>
+  <div class="btn-row">
+    <button class="mini-btn" id="zoneCapture">刷新预览</button>
+    <button class="mini-btn primary" id="zoneSave">保存触摸区域</button>
+  </div>
+  <div class="zone-preview">
+    <div id="zoneImgWrap" class="zone-img-wrap">
+      <img id="zoneSnap" alt="宠物预览" />
+      <div id="zoneLayers"></div>
+      <div id="zoneEmpty" class="zone-empty">点「刷新预览」截图后，在图上点选圆心</div>
+    </div>
+  </div>
+  <div id="zoneEditor" class="zone-editor" style="display:none">
+    <div class="zone-editor-row">
+      <label class="mini-label" for="zonePart">部位名</label>
+      <input id="zonePart" list="zonePartList" placeholder="自定义，如 辫子 / 头发 / 脸颊" />
+      <datalist id="zonePartList">
+        <option value="头"></option><option value="脸"></option><option value="身体"></option>
+        <option value="左手"></option><option value="右手"></option><option value="腿"></option>
+        <option value="尾巴"></option><option value="辫子"></option><option value="头发"></option>
+        <option value="脸颊"></option><option value="脖子"></option><option value="腰"></option>
+      </datalist>
+    </div>
+    <div class="zone-editor-row">
+      <label class="mini-label" for="zoneTap">轻触</label>
+      <input id="zoneTap" placeholder="发什么词（如 摸了摸头）" />
+    </div>
+    <div class="zone-editor-row">
+      <label class="mini-label" for="zoneDouble">双击</label>
+      <input id="zoneDouble" placeholder="发什么词（如 捧着脸端详）" />
+    </div>
+    <div class="zone-editor-row">
+      <label class="mini-label" for="zoneHold">长按</label>
+      <input id="zoneHold" placeholder="发什么词（如 把脸埋进你掌心）" />
+    </div>
+    <div class="zone-editor-row">
+      <label class="mini-label" for="zoneRadius">半径</label>
+      <input id="zoneRadius" type="number" min="2" max="60" step="1" style="max-width:80px" />
+      <span class="hint" style="margin:0">%（窗口宽度）</span>
+    </div>
+    <div class="btn-row">
+      <button class="mini-btn" id="zoneDelete">删除此区域</button>
+    </div>
+  </div>
+  <div class="zone-head">已配置触摸区域（<span id="zoneCount">0</span>）</div>
+  <div id="zoneList" class="zone-list"></div>
+  <div class="zone-empty-hint" id="zoneEmptyHint" style="display:none">（暂无区域：先点「刷新预览」截取宠物，再在图上点一下新建圆心，右侧填部位名与轻触/双击/长按词，最后点「保存触摸区域」）</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let config = null;
+let ipcRenderer = null;
+let curWalk = true;
+try { ipcRenderer = require('electron').ipcRenderer; } catch (e) {}
+
+async function loadConfig() {
+  try {
+    const r = await fetch('/api/config');
+    config = await r.json();
+    $('apiBase').value = config.api?.base || '';
+    $('apiKey').value = config.api?.key || '';
+    $('apiModel').value = config.api?.model || '';
+    $('apiMaxTokens').value = Number(config.maxTokens) || 800;
+    $('apiInputMaxTokens').value = Number(config.inputMaxTokens) || 6000;
+    $('ttsTog').classList.toggle('on', !!config.tts?.enabled);
+    $('sttTog').classList.toggle('on', !!config.stt?.enabled);
+    $('pokeSpeakTog').classList.toggle('on', config.pokeSpeak !== false);
+    $('ttsBaseInput').value = config.tts?.base || '';
+    $('sttBaseInput').value = config.stt?.funasr || '';
+    $('autoReplyTog').classList.toggle('on', config.autoReply !== false);
+    // 自动找话题延迟与次数
+    const ard = Number(config.autoReplyDelay) || 40;
+    const armc = Number(config.autoReplyMaxCount);
+    $('autoReplyDelayRange').value = ard;
+    $('autoReplyDelayVal').textContent = ard;
+    $('autoReplyMaxCountRange').value = (armc > 0 ? armc : 0);
+    $('autoReplyMaxCountVal').textContent = (armc > 0 ? armc : '∞');
+    $('autoReplyCfg').style.display = (config.autoReply !== false) ? '' : 'none';
+    $('globalRulesInput').value = (config.globalRules || []).join('\n');
+    const go = Math.max(10, Math.min(90, Number(config.ghostOpacity) || 40));
+    $('ghostOpacityRange').value = go;
+    $('ghostOpacityVal').textContent = go + '%';
+    renderTriggerList(config.motionTriggers || []);
+    renderCurrentChar();
+    loadTouchThresholds();
+    // 载入自定义触摸区域到工作副本
+    zonesWorking = (config.touch && Array.isArray(config.touch.zones))
+      ? JSON.parse(JSON.stringify(config.touch.zones)) : [];
+    renderZoneList();
+    loadModelList();
+    loadApiPresets();
+    loadTtsSpeakers();
+    setWalkUI(config.autoWalk !== false);
+    setIdleAnimUI(config.idleAnim !== false); // 小动作默认开
+    if (ipcRenderer) ipcRenderer.send('query-walk');
+    // 请求主窗返回当前模型的动作/表情可用列表（避免一直停留在「加载中」）
+    if (ipcRenderer) ipcRenderer.send('query-model-actions');
+    return config;
+  } catch (e) { return null; }
+}
+
+async function postConfig(patch) {
+  const r = await fetch('/api/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch)
+  });
+  const ok = (await r.json()).ok;
+  // 配置已写入，通知宠物窗重新加载配置，保证设置即时生效
+  if (ok) { try { window.panelIPC?.notifyConfigChanged(); } catch (e) {} }
+  return ok;
+}
+
+$('apiSave').addEventListener('click', async () => {
+  const ok = await postConfig({
+    api: {
+      base: $('apiBase').value.trim(),
+      key: $('apiKey').value.trim(),
+      model: $('apiModel').value.trim()
+    },
+    maxTokens: Number($('apiMaxTokens').value) || 800,
+    inputMaxTokens: Number($('apiInputMaxTokens').value) || 6000
+  });
+  if (ok) { $('apiSave').textContent = '已保存 ✓'; setTimeout(() => $('apiSave').textContent = '保存配置', 1500); }
+  else alert('保存失败');
+});
+
+$('globalRulesSave').addEventListener('click', async () => {
+  const rules = $('globalRulesInput').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const ok = await postConfig({ globalRules: rules });
+  if (ok) { $('globalRulesSave').textContent = '已保存 ✓'; setTimeout(() => $('globalRulesSave').textContent = '保存规则书', 1500); }
+});
+
+$('autoReplyTog').addEventListener('click', async () => {
+  const newVal = !(config.autoReply !== false);
+  const ok = await postConfig({ autoReply: newVal });
+  if (ok) {
+    config.autoReply = newVal;
+    $('autoReplyTog').classList.toggle('on', newVal);
+    $('autoReplyCfg').style.display = newVal ? '' : 'none';
+  }
+});
+
+// 自动找话题延迟滑条
+$('autoReplyDelayRange').addEventListener('input', () => {
+  $('autoReplyDelayVal').textContent = $('autoReplyDelayRange').value;
+});
+$('autoReplyDelayRange').addEventListener('change', async () => {
+  const v = Number($('autoReplyDelayRange').value);
+  await postConfig({ autoReplyDelay: v });
+});
+
+// 自动找话题次数滑条
+$('autoReplyMaxCountRange').addEventListener('input', () => {
+  const v = Number($('autoReplyMaxCountRange').value);
+  $('autoReplyMaxCountVal').textContent = (v > 0 ? v : '∞');
+});
+$('autoReplyMaxCountRange').addEventListener('change', async () => {
+  const v = Number($('autoReplyMaxCountRange').value);
+  await postConfig({ autoReplyMaxCount: v });
+});
+
+$('ghostOpacityRange').addEventListener('input', () => {
+  $('ghostOpacityVal').textContent = $('ghostOpacityRange').value + '%';
+  // 实时预览：通知宠物窗立即应用透明度（不保存，松手后 change 才落盘）
+  if (ipcRenderer) ipcRenderer.send('ghost-opacity-preview', Number($('ghostOpacityRange').value));
+});
+$('ghostOpacityRange').addEventListener('change', async () => {
+  await postConfig({ ghostOpacity: Number($('ghostOpacityRange').value) });
+});
+
+$('ttsTog').addEventListener('click', async () => {
+  const newVal = !config.tts.enabled;
+  const ok = await postConfig({ tts: { enabled: newVal } });
+  if (ok) { config.tts.enabled = newVal; $('ttsTog').classList.toggle('on', newVal); }
+});
+$('sttTog').addEventListener('click', async () => {
+  const newVal = !config.stt.enabled;
+  const ok = await postConfig({ stt: { enabled: newVal } });
+  if (ok) { config.stt.enabled = newVal; $('sttTog').classList.toggle('on', newVal); }
+});
+$('pokeSpeakTog').addEventListener('click', async () => {
+  const newVal = !(config.pokeSpeak !== false);
+  const ok = await postConfig({ pokeSpeak: newVal });
+  if (ok) { config.pokeSpeak = newVal; $('pokeSpeakTog').classList.toggle('on', newVal); }
+});
+
+// ---- 自动游走开关（设置界面） ----
+function setWalkUI(on) {
+  curWalk = !!on;
+  const el = $('walkTog');
+  if (el) el.classList.toggle('on', !!on);
+}
+if (ipcRenderer) ipcRenderer.on('walk-state', (e, on) => setWalkUI(on));
+$('walkTog').addEventListener('click', () => {
+  const newVal = !curWalk;
+  setWalkUI(newVal);
+  if (ipcRenderer) ipcRenderer.send('set-walk', newVal);
+  postConfig({ autoWalk: newVal });
+});
+
+// ---- 小动作开关（自主 idle 动画） ----
+let curIdleAnim = true;
+function setIdleAnimUI(on) {
+  curIdleAnim = !!on;
+  const el = $('idleAnimTog');
+  if (el) el.classList.toggle('on', !!on);
+}
+$('idleAnimTog').addEventListener('click', async () => {
+  const newVal = !curIdleAnim;
+  setIdleAnimUI(newVal);
+  await postConfig({ idleAnim: newVal });
+  if (ipcRenderer) ipcRenderer.send('idle-anim-changed', newVal);
+});
+
+// ---- 语音服务地址保存（TTS 输出 + STT 输入 FunASR） ----
+$('voiceAddrSave').addEventListener('click', async () => {
+  const ttsBase = $('ttsBaseInput').value.trim();
+  const sttBase = $('sttBaseInput').value.trim();
+  const patch = {};
+  if (ttsBase) patch.tts = { base: ttsBase };
+  if (sttBase) patch.stt = { funasr: sttBase };
+  if (!Object.keys(patch).length) return;
+  const ok = await postConfig(patch);
+  if (ok) {
+    config.tts.base = ttsBase;
+    config.stt.funasr = sttBase;
+    $('voiceAddrSave').textContent = '已保存 ✓';
+    setTimeout(() => $('voiceAddrSave').textContent = '保存语音服务地址', 1500);
+    if (config.tts.enabled) loadTtsSpeakers(); // 地址变了，刷新音色列表
+  } else {
+    $('voiceAddrSave').textContent = '保存失败 ✗';
+    setTimeout(() => $('voiceAddrSave').textContent = '保存语音服务地址', 1500);
+  }
+});
+
+// ---- 模型列表 ----
+async function loadModelList() {
+  try {
+    const r = await fetch('/api/models');
+    const j = await r.json();
+    const sel = $('modelSelect');
+    sel.innerHTML = '<option value="">-- 选择模型 --</option>';
+    (j.models || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.path;
+      opt.textContent = m.name;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+$('modelApply').addEventListener('click', async () => {
+  const v = $('modelSelect').value;
+  if (!v) return;
+  // 把选中的模型保存到当前角色，并通知主窗口即时重载
+  const name = (config.activeCharacter || '');
+  const r = await fetch('/api/characters/detail?name=' + encodeURIComponent(name));
+  const c = await r.json();
+  const r2 = await fetch('/api/characters', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...c, name: c.name, model: v })
+  });
+  const j2 = await r2.json();
+  if (j2.ok) { $('modelApply').textContent = '已保存 ✓'; setTimeout(() => $('modelApply').textContent = '应用', 2000); }
+  // 通知主窗口重载模型；主窗加载完成后会推送新的可用列表与保存列表
+  try { window.panelIPC?.notifyModelChanged(); } catch (e) {}
+  if (ipcRenderer) ipcRenderer.send('query-model-actions');
+});
+$('modelAddCustom').addEventListener('click', async () => {
+  const p = $('customModelPath').value.trim();
+  if (!p) return;
+  const r = await fetch('/api/models/custom', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: p })
+  });
+  const j = await r.json();
+  if (j.ok) { loadModelList(); $('customModelPath').value = ''; }
+});
+$('modelDelCustom').addEventListener('click', async () => {
+  const v = $('modelSelect').value;
+  if (!v) return;
+  const r = await fetch('/api/models/custom', {
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: v })
+  });
+  const j = await r.json();
+  if (j.ok) loadModelList();
+});
+
+// ---- API 预设 ----
+async function loadApiPresets() {
+  try {
+    const r = await fetch('/api/apis');
+    const j = await r.json();
+    const sel = $('apiPreset');
+    sel.innerHTML = '<option value="">-- API 预设 --</option>';
+    (j.apis || []).forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.name;
+      opt.textContent = a.name;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+$('apiPresetLoad').addEventListener('click', async () => {
+  const name = $('apiPreset').value;
+  if (!name) return;
+  const r = await fetch('/api/apis');
+  const j = await r.json();
+  const a = (j.apis || []).find(x => x.name === name);
+  if (a) {
+    $('apiBase').value = a.base || '';
+    $('apiKey').value = a.key || '';
+    $('apiModel').value = a.model || '';
+  }
+});
+$('apiPresetSave').addEventListener('click', async () => {
+  const name = $('apiPreset').value || prompt('预设名称：');
+  if (!name) return;
+  const r = await fetch('/api/apis', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, base: $('apiBase').value.trim(), key: $('apiKey').value.trim(), model: $('apiModel').value.trim() })
+  });
+  const j = await r.json();
+  if (j.ok) loadApiPresets();
+});
+$('apiPresetDel').addEventListener('click', async () => {
+  const name = $('apiPreset').value;
+  if (!name) return;
+  const r = await fetch('/api/apis', {
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  const j = await r.json();
+  if (j.ok) loadApiPresets();
+});
+
+// ---- TTS 音色 ----
+async function loadTtsSpeakers() {
+  try {
+    const r = await fetch('/api/tts/speakers');
+    const j = await r.json();
+    const sel = $('ttsSpeaker');
+    sel.innerHTML = '<option value="">-- 默认音色 --</option>';
+    const speakers = j.speakers || [];
+    speakers.forEach(s => {
+      const val = typeof s === 'string' ? s : (s.voice_id || s.name || s.id || String(s));
+      const label = typeof s === 'string' ? s : (s.name || s.voice_id || String(s));
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    });
+    if (config?.tts?.speaker) sel.value = config.tts.speaker;
+  } catch (e) {}
+}
+$('ttsSpeakerSave').addEventListener('click', async () => {
+  const ok = await postConfig({ tts: { speaker: $('ttsSpeaker').value } });
+  if (ok) { $('ttsSpeakerSave').textContent = '已保存 ✓'; setTimeout(() => $('ttsSpeakerSave').textContent = '保存音色', 1500); }
+});
+$('ttsSpeakerReload').addEventListener('click', loadTtsSpeakers);
+
+// ---- 动作/表情触发 ----
+// 渲染当前模型可用的动作/表情列表（由宠物主窗通过 IPC 推送）
+function renderModelActions(d) {
+  const el = $('triggerModelInfo');
+  if (!el) return;
+  if (!d || !d.loaded) { el.textContent = '（模型未加载，请先在「Live2D 模型」里应用一个模型）'; return; }
+  const lines = [];
+  if (d.groups && d.groups.length) {
+    lines.push('动作组: ' + (d.groups.length > 20 ? d.groups.slice(0, 20).join(', ') + ' …' : d.groups.join(', ')));
+  }
+  if (d.ungrouped && d.ungrouped.length) {
+    lines.push('动作文件: ' + d.ungrouped.join(', '));
+  }
+  if (d.expressions && d.expressions.length) {
+    lines.push('表情: ' + d.expressions.join(', '));
+  }
+  el.textContent = lines.length ? lines.join('\n') : '（当前模型无可用动作/表情，可直接在下方填写任意动作名）';
+}
+// 显示当前活跃角色（触发配置属于哪个角色一目了然）
+function renderCurrentChar() {
+  const el = $('curCharInfo');
+  if (!el) return;
+  el.textContent = config && config.activeCharacter ? ('当前角色：' + config.activeCharacter) : '当前角色：无';
+}
+// 收到主窗推送：刷新可用列表，并按最新角色同步保存列表（人物个性化）
+if (ipcRenderer) ipcRenderer.on('model-actions', async (e, d) => {
+  if (d) renderModelActions(d);
+  try {
+    const r = await fetch('/api/config');
+    const fresh = await r.json();
+    config = fresh;
+    renderTriggerList(config.motionTriggers || []);
+    renderCurrentChar();
+  } catch (err) {}
+});
+// 角色切换通知：立即按最新角色刷新保存列表（不依赖主窗重载模型成功）
+if (ipcRenderer) ipcRenderer.on('character-changed', async () => {
+  try {
+    const r = await fetch('/api/config');
+    const fresh = await r.json();
+    config = fresh;
+    renderTriggerList(config.motionTriggers || []);
+    renderCurrentChar();
+  } catch (err) {}
+});
+function renderTriggerList(triggers) {
+  const box = $('triggerList');
+  box.innerHTML = '';
+  triggers.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'trigger-row';
+    row.innerHTML = '<input data-k="' + i + '" value="' + t.keywords + '" placeholder="关键词，逗号分隔" />' +
+      '<select data-t="' + i + '"><option value="motion">动作</option><option value="expression" ' + (t.type === 'expression' ? 'selected' : '') + '>表情</option></select>' +
+      '<input data-a="' + i + '" value="' + t.action + '" placeholder="动作/表情名" style="max-width:110px" />' +
+      '<button class="mini-btn" data-del="' + i + '">×</button>';
+    box.appendChild(row);
+  });
+  box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+    const list = config.motionTriggers || [];
+    list.splice(Number(b.dataset.del), 1);
+    renderTriggerList(list);
+  }));
+}
+$('triggerAdd').addEventListener('click', () => {
+  const list = config.motionTriggers || [];
+  list.push({ keywords: '', action: '', type: 'motion' });
+  renderTriggerList(list);
+});
+$('triggerSave').addEventListener('click', async () => {
+  const list = [];
+  document.querySelectorAll('#triggerList .trigger-row').forEach(row => {
+    const k = row.querySelector('[data-k]').value.trim();
+    const a = row.querySelector('[data-a]').value.trim();
+    const t = row.querySelector('[data-t]').value;
+    if (k && a) list.push({ keywords: k, action: a, type: t });
+  });
+  // 带角色名保存：每套触发配置跟随当前人物，互不干扰。
+  // 先重新拉一次最新活跃角色，避免存到页面加载时的旧角色
+  let curChar = config.activeCharacter || '';
+  try {
+    const r0 = await fetch('/api/config');
+    const cur = await r0.json();
+    curChar = cur.activeCharacter || curChar;
+  } catch (e) {}
+  const ok = await postConfig({ motionTriggers: list, character: curChar });
+  if (ok) { $('triggerSave').textContent = '已保存 ✓'; setTimeout(() => $('triggerSave').textContent = '保存触发配置', 1500); }
+});
+
+// ---- 触摸手势：9 部位默认词已移除，全部由用户自定义区域决定；这里只加载长按/双击阈值 ----
+function getTouchCfg() {
+  return (config.touch && typeof config.touch === 'object') ? config.touch : { holdMs: 500, doubleMs: 300, zones: [] };
+}
+function loadTouchThresholds() {
+  const t = getTouchCfg();
+  $('touchHoldMs').value = Number(t.holdMs) || 500;
+  $('touchDoubleMs').value = Number(t.doubleMs) || 300;
+}
+
+// ============ 触摸区域（自定义部位圈选，部位名可任意自定义） ============
+let zonesWorking = [];
+let snap = null;       // { dataUrl, w, h }
+let selIdx = -1;
+let zoneDrag = null;   // { mode:'move'|'resize', idx }
+
+// 拼出完整 touch 配置（9 部位词 + 阈值 + 自定义区域），两处保存共用
+function buildFullTouch() {
+  return {
+    holdMs: Math.max(200, Math.min(3000, Number($('touchHoldMs').value) || 500)),
+    doubleMs: Math.max(100, Math.min(1000, Number($('touchDoubleMs').value) || 300)),
+    zones: (zonesWorking && zonesWorking.length) ? zonesWorking : (getTouchCfg().zones || [])
+  };
+}
+
+$('zoneCapture').addEventListener('click', () => { if (ipcRenderer) ipcRenderer.send('capture-pet'); });
+if (ipcRenderer) ipcRenderer.on('pet-snapshot', (e, data) => { snap = data; showSnap(); });
+
+function showSnap() {
+  if (!snap) return;
+  $('zoneSnap').src = snap.dataUrl;
+  $('zoneImgWrap').style.aspectRatio = (snap.w / snap.h).toFixed(4);
+  $('zoneEmpty').style.display = 'none';
+  renderZones();
+}
+
+function renderZones() {
+  const layers = $('zoneLayers');
+  layers.innerHTML = '';
+  if (!snap) return;
+  const ar = snap.h / snap.w; // 高/宽，归一化各向同性校正（与运行时一致）
+  zonesWorking.forEach((z, i) => {
+    const d = document.createElement('div');
+    d.className = 'zone-circle' + (i === selIdx ? ' sel' : '');
+    d.style.left = ((z.x - z.r) * 100) + '%';
+    d.style.top = ((z.y - z.r / ar) * 100) + '%';
+    d.style.width = (2 * z.r * 100) + '%';
+    d.style.height = (2 * z.r / ar * 100) + '%';
+    const h = document.createElement('div');
+    h.className = 'zone-handle';
+    d.appendChild(h);
+    const rl = document.createElement('div');
+    rl.className = 'zone-rlabel';
+    rl.textContent = Math.round(z.r * 100) + '%';
+    d.appendChild(rl);
+    d.addEventListener('mousedown', (e) => {
+      if (e.target === h) return;
+      e.stopPropagation();
+      zoneDrag = { mode: 'move', idx: i };
+      e.preventDefault();
+    });
+    h.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      zoneDrag = { mode: 'resize', idx: i };
+      e.preventDefault();
+    });
+    d.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selIdx = i; renderZones(); showEditor();
+    });
+    layers.appendChild(d);
+  });
+  renderZoneList();
+}
+
+function renderZoneList() {
+  const box = $('zoneList');
+  box.innerHTML = '';
+  const countEl = $('zoneCount');
+  if (countEl) countEl.textContent = zonesWorking.length;
+  const hint = $('zoneEmptyHint');
+  if (hint) hint.style.display = zonesWorking.length ? 'none' : 'block';
+  zonesWorking.forEach((z, i) => {
+    const words = [z.tap, z.double, z.hold].filter(Boolean).join(' / ');
+    const rPct = Math.round((Number(z.r) || 0) * 100);
+    const it = document.createElement('div');
+    it.className = 'zone-item' + (i === selIdx ? ' sel' : '');
+    it.innerHTML = '<span class="zi-part">' + (z.name || z.part || '未命名') + '</span>'
+      + '<span class="zi-r">r=' + rPct + '%</span>'
+      + '<span>' + (words || '（未填词）') + '</span>';
+    it.addEventListener('click', () => { selIdx = i; renderZones(); showEditor(); });
+    box.appendChild(it);
+  });
+}
+
+function showEditor() {
+  const z = zonesWorking[selIdx];
+  if (!z) { $('zoneEditor').style.display = 'none'; return; }
+  $('zoneEditor').style.display = 'block';
+  $('zonePart').value = z.name || z.part || '';
+  $('zoneTap').value = z.tap || (z.prompts && (z.prompts[Object.keys(z.prompts)[0]] || '')) || '';
+  $('zoneDouble').value = z.double || (z.doublePrompts && (z.doublePrompts[Object.keys(z.doublePrompts)[0]] || '')) || '';
+  $('zoneHold').value = z.hold || (z.holdPrompts && (z.holdPrompts[Object.keys(z.holdPrompts)[0]] || '')) || '';
+  $('zoneRadius').value = Math.round(z.r * 100);
+}
+
+function syncZoneWords() {
+  const z = zonesWorking[selIdx]; if (!z) return;
+  z.name = $('zonePart').value.trim() || '未命名部位';
+  z.tap = $('zoneTap').value.trim();
+  z.double = $('zoneDouble').value.trim();
+  z.hold = $('zoneHold').value.trim();
+  renderZoneList();
+}
+['zonePart', 'zoneTap', 'zoneDouble', 'zoneHold'].forEach(id => {
+  const el = $(id); if (el) el.addEventListener('input', syncZoneWords);
+});
+
+// 预览区空白处点击 → 新建区域
+$('zoneImgWrap').addEventListener('click', (e) => {
+  if (e.target.closest('.zone-circle')) return;
+  if (!snap) { alert('请先点「刷新预览」截取当前宠物'); return; }
+  const rect = $('zoneImgWrap').getBoundingClientRect();
+  const nx = (e.clientX - rect.left) / rect.width;
+  const ny = (e.clientY - rect.top) / rect.height;
+  const z = { x: nx, y: ny, r: 0.08, name: '部位', tap: '', double: '', hold: '' };
+  zonesWorking.push(z); selIdx = zonesWorking.length - 1;
+  renderZones(); showEditor();
+});
+
+// 拖动移动 / 缩放
+document.addEventListener('mousemove', (e) => {
+  if (!zoneDrag || !snap) return;
+  const rect = $('zoneImgWrap').getBoundingClientRect();
+  const nx = (e.clientX - rect.left) / rect.width;
+  const ny = (e.clientY - rect.top) / rect.height;
+  const ar = snap.h / snap.w;
+  const z = zonesWorking[zoneDrag.idx];
+  if (zoneDrag.mode === 'move') {
+    z.x = Math.min(1, Math.max(0, nx));
+    z.y = Math.min(1, Math.max(0, ny));
+  } else {
+    const dx = nx - z.x, dy = (ny - z.y) * ar;
+    z.r = Math.max(0.01, Math.min(1, Math.hypot(dx, dy)));
+    $('zoneRadius').value = Math.round(z.r * 100);
+  }
+  renderZones();
+});
+document.addEventListener('mouseup', () => {
+  if (zoneDrag) { zoneDrag = null; renderZoneList(); }
+});
+
+// 半径数值输入
+$('zoneRadius').addEventListener('input', () => {
+  const z = zonesWorking[selIdx]; if (!z) return;
+  z.r = Math.max(0.01, Math.min(1, (Number($('zoneRadius').value) || 8) / 100));
+  renderZones();
+});
+
+$('zoneDelete').addEventListener('click', () => {
+  if (selIdx < 0) return;
+  zonesWorking.splice(selIdx, 1);
+  selIdx = -1; $('zoneEditor').style.display = 'none';
+  renderZones();
+});
+
+$('zoneSave').addEventListener('click', async () => {
+  const cfg = buildFullTouch();
+  cfg.zones = zonesWorking;
+  const ok = await postConfig({ touch: cfg });
+  if (ok) {
+    config.touch = cfg;
+    const n = (zonesWorking || []).length;
+    $('zoneSave').textContent = '已保存 ' + n + ' 个区域 ✓';
+    renderZoneList();   // 立即刷新列表，确认生没生效
+    setTimeout(() => { $('zoneSave').textContent = '保存触摸区域'; }, 1800);
+  } else alert('保存失败');
+});
+
+loadConfig();
+</script>
+</body>
+</html>

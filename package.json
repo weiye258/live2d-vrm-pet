@@ -1,0 +1,14 @@
+{
+  "name": "live2d-pet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地 Live2D 桌宠 · 酒馆风格角色卡 · 自配 API",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

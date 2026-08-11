@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>记忆</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: linear-gradient(160deg, #2a1b3d 0%, #3d2b52 60%, #4a3059 100%);
+  color: #e8ddf0;
+  min-height: 100vh;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+h1 { font-size: 17px; margin-bottom: 6px; color: #ffd6e8; letter-spacing: 1px; }
+.sub { font-size: 12px; color: #a893b8; margin-bottom: 14px; }
+.threshold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.threshold input {
+  width: 64px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: #e8ddf0;
+  font-size: 13px;
+  outline: none;
+  text-align: center;
+}
+.mini-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e8ddf0;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.mini-btn:hover { background: rgba(255, 255, 255, 0.18); }
+.mini-btn.primary {
+  background: rgba(255, 157, 180, 0.3);
+  border-color: #ff9db4;
+  color: #ffe4ee;
+}
+.mini-btn.primary:hover { background: rgba(255, 157, 180, 0.45); }
+#scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.mem-sec {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.mem-sec-t {
+  font-size: 13px;
+  color: #ffb9d0;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.mem-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  word-break: break-word;
+}
+.mem-item .txt { flex: 1; }
+.mem-item .x {
+  background: none;
+  border: none;
+  color: #b893a8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.mem-item .x:hover { color: #ff9db4; background: rgba(255,157,180,0.15); }
+.mem-add { display: flex; gap: 6px; margin-top: 8px; }
+.mem-add input {
+  flex: 1;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: #e8ddf0;
+  font-size: 13px;
+  outline: none;
+}
+.mem-add input:focus { border-color: #ff9db4; }
+textarea#memSummary {
+  width: 100%;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e8ddf0;
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+textarea#memSummary:focus { border-color: #ff9db4; }
+#foot {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+#foot .mini-btn { flex: 1; }
+</style>
+</head>
+<body>
+<h1>🧠 记忆</h1>
+<div class="sub">记忆自动沉淀，可手动增删。保存后下次对话生效。</div>
+
+<div class="threshold">
+  <label for="memIntervalInput">每</label>
+  <input id="memIntervalInput" type="number" min="1" max="200" value="20" />
+  <label for="memIntervalInput">条对话自动沉淀一次</label>
+  <button class="mini-btn" id="memIntervalSave" style="margin-left:auto">保存</button>
+</div>
+
+<div id="scroll">
+  <div class="mem-sec">
+    <div class="mem-sec-t">事实（facts）</div>
+    <div id="memFactsList"></div>
+    <div class="mem-add"><input id="memFactsInput" placeholder="添加事实，回车确认" /><button class="mini-btn">＋</button></div>
+  </div>
+  <div class="mem-sec">
+    <div class="mem-sec-t">关键事件（events）</div>
+    <div id="memEventsList"></div>
+    <div class="mem-add"><input id="memEventsInput" placeholder="添加事件，回车确认" /><button class="mini-btn">＋</button></div>
+  </div>
+  <div class="mem-sec">
+    <div class="mem-sec-t">物品（items）</div>
+    <div id="memItemsList"></div>
+    <div class="mem-add"><input id="memItemsInput" placeholder="添加物品，回车确认" /><button class="mini-btn">＋</button></div>
+  </div>
+  <div class="mem-sec">
+    <div class="mem-sec-t">喜好（prefs）</div>
+    <div id="memPrefsList"></div>
+    <div class="mem-add"><input id="memPrefsInput" placeholder="添加喜好，回车确认" /><button class="mini-btn">＋</button></div>
+  </div>
+  <div class="mem-sec">
+    <div class="mem-sec-t">长期概要（summary）</div>
+    <textarea id="memSummary" rows="3" placeholder="对话长河的精髓摘要…"></textarea>
+  </div>
+</div>
+
+<div id="foot">
+  <button class="mini-btn primary" id="memSave">保存记忆</button>
+  <button class="mini-btn" id="memClear">清空记忆</button>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let currentName = '';
+const CATS = ['facts', 'events', 'items', 'prefs'];
+
+async function loadMem() {
+  try {
+    // 当前角色
+    const cr = await fetch('/api/config');
+    const cfg = await cr.json();
+    currentName = cfg.activeCharacter || '';
+    const r = await fetch('/api/memory?name=' + encodeURIComponent(currentName));
+    const j = await r.json();
+    const mem = j;
+    // 记忆阈值来自角色卡
+    const dr = await fetch('/api/characters/detail?name=' + encodeURIComponent(currentName));
+    const detail = await dr.json();
+    $('memIntervalInput').value = detail.memory_interval || 20;
+    CATS.forEach(cat => {
+      const box = $(cat === 'facts' ? 'memFactsList' : 'mem' + cat[0].toUpperCase() + cat.slice(1) + 'List');
+      box.innerHTML = '';
+      (mem[cat] || []).forEach((item, i) => {
+        const d = document.createElement('div');
+        d.className = 'mem-item';
+        const t = document.createElement('span');
+        t.className = 'txt';
+        t.textContent = item;
+        const x = document.createElement('button');
+        x.className = 'x';
+        x.textContent = '×';
+        x.title = '删除';
+        x.addEventListener('click', () => {
+          const list = mem[cat] || [];
+          list.splice(i, 1);
+          mem[cat] = list;
+          renderCat(cat, list);
+          saveMem(); // 删除即时落盘，避免 5s 轮询刷新把已删数据拉回来
+        });
+        d.appendChild(t);
+        d.appendChild(x);
+        box.appendChild(d);
+      });
+    });
+    $('memSummary').value = mem.summary || '';
+    window.__mem = mem;
+  } catch (e) {}
+}
+
+function renderCat(cat, list) {
+  const box = $(cat === 'facts' ? 'memFactsList' : 'mem' + cat[0].toUpperCase() + cat.slice(1) + 'List');
+  box.innerHTML = '';
+  (list || []).forEach((item, i) => {
+    const d = document.createElement('div');
+    d.className = 'mem-item';
+    const t = document.createElement('span');
+    t.className = 'txt';
+    t.textContent = item;
+    const x = document.createElement('button');
+    x.className = 'x';
+    x.textContent = '×';
+    x.title = '删除';
+    x.addEventListener('click', () => {
+      const l = window.__mem[cat] || [];
+      l.splice(i, 1);
+      window.__mem[cat] = l;
+      renderCat(cat, l);
+      saveMem(); // 删除即时落盘
+    });
+    d.appendChild(t);
+    d.appendChild(x);
+    box.appendChild(d);
+  });
+}
+
+CATS.forEach(cat => {
+  const input = $('mem' + cat[0].toUpperCase() + cat.slice(1) + 'Input');
+  const btn = input.parentElement.querySelector('button');
+  const add = () => {
+    const v = input.value.trim();
+    if (!v) return;
+    if (!window.__mem[cat]) window.__mem[cat] = [];
+    window.__mem[cat].push(v);
+    input.value = '';
+    renderCat(cat, window.__mem[cat]);
+    saveMem(); // 新增即时落盘
+  };
+  btn.addEventListener('click', add);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+});
+
+async function saveMem() {
+  const mem = window.__mem || {};
+  const body = {
+    name: currentName,
+    facts: mem.facts || [],
+    events: mem.events || [],
+    items: mem.items || [],
+    prefs: mem.prefs || [],
+    summary: $('memSummary').value.trim()
+  };
+  const r = await fetch('/api/memory', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  let ok = j.ok;
+  // 记忆阈值属于角色卡字段，单独保存（先读完整角色卡再合并，避免覆盖）
+  if (ok) {
+    const dr = await fetch('/api/characters/detail?name=' + encodeURIComponent(currentName));
+    const detail = await dr.json();
+    detail.memory_interval = parseInt($('memIntervalInput').value, 10) || 20;
+    const r2 = await fetch('/api/characters', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(detail)
+    });
+    const j2 = await r2.json();
+    ok = !!j2.ok;
+  }
+  if (ok) { $('memSave').textContent = '已保存 ✓'; setTimeout(() => $('memSave').textContent = '保存记忆', 1500); }
+}
+
+$('memSave').addEventListener('click', saveMem);
+$('memIntervalSave').addEventListener('click', saveMem);
+$('memClear').addEventListener('click', async () => {
+  const mem = window.__mem || {};
+  CATS.forEach(c => { mem[c] = []; });
+  mem.summary = '';
+  renderCat('facts', []);
+  renderCat('events', []);
+  renderCat('items', []);
+  renderCat('prefs', []);
+  $('memSummary').value = '';
+  await saveMem();
+});
+
+loadMem();
+// 每 5s 静默刷新，编辑中不覆盖
+setInterval(() => {
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
+  loadMem();
+}, 5000);
+</script>
+</body>
+</html>

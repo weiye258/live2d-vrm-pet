@@ -1,0 +1,38 @@
+# ---- 敏感配置：含 API Key，绝不入库 ----
+config.json
+
+# ---- 示例配置（保留占位）----
+# config.example.json 应入库，见 README
+
+# ---- 用户隐私数据 ----
+chats/
+chat-history/
+chat-history.json.bak
+sessions/
+memories/
+renderer.log
+renderer.log.*
+characters/
+logs/
+pet.pid
+
+# ---- 备份 ----
+_backup*/
+_backup_*
+
+# ---- 依赖与构建 ----
+node_modules/
+dist/
+out/
+
+# ---- 版权模型：碧蓝航线 z23（游戏资产，勿分发）----
+models/blhx_z23/
+
+# ---- 用户下载的 VRM 模型（体积大/版权不明，不入库）----
+models/vrm/
+
+# ---- 系统 / 编辑器 ----
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

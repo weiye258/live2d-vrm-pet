@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live2D 桌宠</title>
+<link rel="stylesheet" href="style.css" />
+<!-- Import Map：Three.js + three-vrm ESM 模块映射 -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js"
+  }
+}
+</script>
+<script>
+/* 屏蔽 Live2D 库因模型缺失音效/动作资源而刷屏的 console.error（资源本就缺失，不影响功能）
+   必须在 lib 脚本之前加载，否则库会捕获原生 console.error 绕过覆盖 */
+(function () {
+  var _ce = (typeof console !== 'undefined' && console.error) ? console.error.bind(console) : function () {};
+  var NOISE = ['[SoundManager]', '[MotionManager]', 'Failed to load motion', 'Failed to play audio', '[XHRLoader]', 'Failed to load resource as'];
+  console.error = function () {
+    try {
+      var s = Array.prototype.map.call(arguments, function (x) { return (x && x.message) ? x.message : String(x); }).join(' ');
+      for (var i = 0; i < NOISE.length; i++) { if (s.indexOf(NOISE[i]) >= 0) return; }
+    } catch (e) {}
+    return _ce.apply(console, arguments);
+  };
+})();
+</script>
+</head>
+<body data-mood="pink">
+
+<!-- 虚线框：人物自适应此框；可拖边缘/角拉伸窗口（窗口边界即框边界，系统硬限制，超出会被裁） -->
+<div id="frame">
+  <div class="rh" data-anchor="n"  style="top:0;left:50%;transform:translateX(-50%)"></div>
+  <div class="rh" data-anchor="s"  style="bottom:0;left:50%;transform:translateX(-50%)"></div>
+  <div class="rh" data-anchor="w"  style="left:0;top:50%;transform:translateY(-50%)"></div>
+  <div class="rh" data-anchor="e"  style="right:0;top:50%;transform:translateY(-50%)"></div>
+  <div class="rh" data-anchor="nw" style="top:0;left:0"></div>
+  <div class="rh" data-anchor="ne" style="top:0;right:0"></div>
+  <div class="rh" data-anchor="sw" style="bottom:0;left:0"></div>
+  <div class="rh" data-anchor="se" style="bottom:0;right:0"></div>
+</div>
+
+<div id="aura"></div>
+
+<!-- 加载状态 -->
+<div id="status">
+  <div class="spin"></div>
+  <div id="statusText">加载中…</div>
+</div>
+
+<!-- Live2D 画布（PixiJS） -->
+<div id="canvas-wrap"></div>
+
+<!-- VRM 画布（Three.js）— 默认隐藏，加载 VRM 模型时显示 -->
+<div id="vrm-canvas-wrap" style="display:none">
+  <canvas id="vrm-canvas"></canvas>
+</div>
+
+<!-- 正在输入 -->
+<div id="typing">
+  <span class="dots"><i></i><i></i><i></i></span>
+  <span class="lbl" id="typingLbl">正在想…</span>
+</div>
+
+<!-- 语音状态 -->
+<div id="voiceState"></div>
+<div id="voiceRing"></div>
+
+<!-- 气泡 -->
+<div id="bubble"></div>
+
+<!-- ============ 聊天面板 ============ -->
+<div class="panel" id="chatPanel">
+  <div class="panel-header">
+    <h3>对话</h3>
+    <button class="mini-btn" id="chatResetBtn" title="清空对话">清空</button>
+  </div>
+  <div id="chatMsgs"></div>
+  <div class="chatrow">
+    <input id="chatInput" placeholder="说点什么…" />
+    <button id="chatSend">发送</button>
+  </div>
+</div>
+
+<!-- ============ 角色面板 ============ -->
+<div class="panel" id="charPanel">
+  <div class="panel-header">
+    <h3>角色</h3>
+    <button class="mini-btn" id="charAddBtn">＋新建</button>
+  </div>
+  <div id="charList"></div>
+  <div id="charForm" class="sub-form" style="display:none">
+    <div class="cf-title" id="cfTitle">新建角色</div>
+    <input id="cfName" placeholder="标识 name（唯一，如 xiaoye）" />
+    <input id="cfLabel" placeholder="显示名（如 小夜）" />
+    <textarea id="cfDesc" placeholder="角色描述（外貌、背景、身份…）" rows="3"></textarea>
+    <input id="cfPersonality" placeholder="性格（如：粘人、细心、爱观察）" />
+    <input id="cfScenario" placeholder="场景设定" />
+    <textarea id="cfFirstMes" placeholder="开场白（如：嗨，主人~）" rows="2"></textarea>
+    <select id="cfModel"><option value="">-- 默认模型 --</option></select>
+    <select id="cfTtsSpeaker"><option value="">-- 角色音色（默认全局） --</option></select>
+    <input id="cfMemoryInterval" type="number" min="1" max="200" placeholder="记忆阈值：每多少条对话自动沉淀一次（如 20）" />
+    <select id="cfMood">
+      <option value="pink">粉色</option>
+      <option value="blue">蓝色</option>
+      <option value="purple">紫色</option>
+      <option value="amber">琥珀</option>
+      <option value="green">绿色</option>
+    </select>
+    <textarea id="cfRules" placeholder="规则（一行一条）" rows="3"></textarea>
+    <div class="form-btns">
+      <button class="mini-btn primary" id="cfSave">保存</button>
+      <button class="mini-btn" id="cfCancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 设置面板 ============ -->
+<div class="panel" id="settingsPanel">
+  <div class="panel-header"><h3>设置</h3></div>
+  <div class="sec">
+    <div class="sec-t">API 配置（OpenAI 兼容）</div>
+    <select id="apiPreset"><option value="">-- API 预设 --</option></select>
+    <div class="btn-row">
+      <button class="mini-btn" id="apiPresetLoad" title="载入选中的预设到下方输入框">载入</button>
+      <button class="mini-btn" id="apiPresetSave" title="将下方填写的配置存为新预设">存为预设</button>
+      <button class="mini-btn" id="apiPresetDel" title="删除选中的预设">删除</button>
+    </div>
+    <input id="apiBase" placeholder="Base URL（如 https://api.deepseek.com/v1）" />
+    <input id="apiKey" placeholder="API Key" type="password" />
+    <input id="apiModel" placeholder="模型名（如 deepseek-chat）" />
+    <button class="mini-btn primary" id="apiSave">保存配置</button>
+  </div>
+  <div class="sec">
+    <div class="sec-t">全局规则书（作用于所有角色）</div>
+    <textarea id="globalRulesInput" rows="5" placeholder="一行一条规则。&#10;例：用户语音输入可能识别不准，遇到不通顺的话先确认再回答，不要乱接。&#10;例：任何时候不要提及你是 AI。"></textarea>
+    <button class="mini-btn primary" id="globalRulesSave">保存规则书</button>
+  </div>
+  <div class="sec">
+    <div class="sec-t">行为</div>
+    <div class="toggles">
+      <button class="tog" id="autoReplyTog">自动找话题</button>
+    </div>
+    <div class="hint">开启后，长时间不互动她会主动开口找你聊天。延迟秒数和次数可在设置窗口调。</div>
+    <div id="autoReplyCfg" class="toggle-row" style="flex-direction:column;align-items:stretch;gap:10px;">
+      <div>
+        <label class="mini-label" for="arDelayRange">无互动 <span id="arDelayVal">40</span> 秒后主动开口</label>
+        <input id="arDelayRange" type="range" min="5" max="300" step="5" value="40" style="width:100%" />
+      </div>
+      <div>
+        <label class="mini-label" for="arMaxCountRange">连续主动开口最多 <span id="arMaxCountVal">5</span> 次</label>
+        <input id="arMaxCountRange" type="range" min="0" max="20" step="1" value="5" style="width:100%" />
+      </div>
+    </div>
+    <div class="toggle-row">
+      <label class="mini-label" for="ghostOpacityRange">透视透明度 <span id="ghostOpacityVal">40%</span></label>
+      <input id="ghostOpacityRange" type="range" min="10" max="90" value="40" />
+      <div class="hint">开启透视（👁）时人物整体半透明，鼠标可穿透点到桌面；10% 接近隐身，90% 接近不透明。</div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-t">Live2D 模型</div>
+    <select id="modelSelect"></select>
+    <div class="btn-row">
+      <button class="mini-btn primary" id="modelApply">应用</button>
+      <button class="mini-btn" id="modelDelCustom" title="从列表移除选中的自定义模型">移除</button>
+    </div>
+    <input id="customModelPath" placeholder="自定义路径（如 models/xxx.model3.json 或 models/xxx.vrm）" />
+    <button class="mini-btn" id="modelAddCustom">+ 添加到列表</button>
+  </div>
+  <div class="sec">
+    <div class="sec-t">动作/表情触发（聊天中出现关键词时播放）</div>
+    <div id="triggerModelInfo" class="trigger-info">当前模型动作/表情列表加载中…</div>
+    <div id="triggerList"></div>
+    <div class="btn-row">
+      <button class="mini-btn" id="triggerAdd">+ 添加触发</button>
+      <button class="mini-btn primary" id="triggerSave">保存触发配置</button>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-t">语音</div>
+    <div class="toggles">
+      <button class="tog" id="ttsTog">语音发声</button>
+      <button class="tog" id="sttTog">语音输入</button>
+      <button class="tog" id="pokeSpeakTog">触摸身体发语音</button>
+    </div>
+    <div class="hint">关闭后，戳人物身体/头只做动作反馈，不再触发大模型语音回复。</div>
+    <select id="ttsSpeaker"><option value="">-- 加载音色列表 --</option></select>
+    <div class="btn-row">
+      <button class="mini-btn primary" id="ttsSpeakerSave">保存音色</button>
+      <button class="mini-btn" id="ttsSpeakerReload">刷新列表</button>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-t">关于</div>
+    <div class="about">本地 Live2D 桌宠 · 酒馆风格角色卡<br>pixi-live2d-display · 自配 API<br>右键角色有更多选项</div>
+  </div>
+</div>
+
+<!-- ============ 记忆面板 ============ -->
+<div class="panel" id="memPanel">
+  <div class="panel-header">
+    <h3 id="memTitle">记忆</h3>
+    <button class="mini-btn" id="memRefresh" title="刷新">⟳</button>
+  </div>
+  <div class="mem-hint">记忆自动沉淀，可手动增删。保存后下次对话生效。</div>
+  <div class="mem-threshold">
+    <label for="memIntervalInput">每 <input id="memIntervalInput" type="number" min="1" max="200" /> 条对话自动沉淀一次</label>
+    <button class="mini-btn" id="memIntervalSave">保存</button>
+  </div>
+  <div class="mem-scroll">
+    <div class="mem-sec"><div class="mem-sec-t">事实（facts）</div>
+      <div id="memFactsList"></div>
+      <div class="mem-add"><input id="memFactsInput" placeholder="添加事实，回车确认" /><button class="mini-btn" data-add="facts">＋</button></div>
+    </div>
+    <div class="mem-sec"><div class="mem-sec-t">关键事件（events）</div>
+      <div id="memEventsList"></div>
+      <div class="mem-add"><input id="memEventsInput" placeholder="添加事件，回车确认" /><button class="mini-btn" data-add="events">＋</button></div>
+    </div>
+    <div class="mem-sec"><div class="mem-sec-t">物品（items）</div>
+      <div id="memItemsList"></div>
+      <div class="mem-add"><input id="memItemsInput" placeholder="添加物品，回车确认" /><button class="mini-btn" data-add="items">＋</button></div>
+    </div>
+    <div class="mem-sec"><div class="mem-sec-t">喜好（prefs）</div>
+      <div id="memPrefsList"></div>
+      <div class="mem-add"><input id="memPrefsInput" placeholder="添加喜好，回车确认" /><button class="mini-btn" data-add="prefs">＋</button></div>
+    </div>
+    <div class="mem-sec"><div class="mem-sec-t">长期概要（summary）</div>
+      <textarea id="memSummary" rows="3" placeholder="对话长河的精髓摘要…"></textarea>
+    </div>
+  </div>
+  <div class="chatrow">
+    <button class="mini-btn primary" id="memSave">保存记忆</button>
+    <button class="mini-btn" id="memClear">清空记忆</button>
+  </div>
+</div>
+
+<!-- dock 已移至 dock.html（独立浮窗，跟随人物） -->
+
+<!-- ============ 库（按顺序加载） ============ -->
+<script src="lib/live2d.min.js"></script>
+<script src="lib/live2dcubismcore.min.js"></script>
+<script src="lib/pixi.min.js"></script>
+<script src="lib/index.min.js"></script>
+<script src="app.js"></script>
+<!-- VRM 适配器（ESM module，通过 importmap 加载 Three.js + three-vrm）加 ?v= 防缓存 -->
+<script type="module" src="vrm-adapter.js?v=8"></script>
+</body>
+</html>

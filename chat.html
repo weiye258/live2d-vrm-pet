@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>聊天</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: #fdf6f0;
+  color: #5a463a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#topbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+  background: #fff;
+  border-bottom: 1px solid #f0e0d4;
+}
+#sessSel {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #e8d5c8;
+  border-radius: 10px;
+  font-size: 13px;
+  background: #fdf6f0;
+  color: #5a463a;
+  outline: none;
+}
+#topbar button {
+  border: none;
+  background: #ffe3ea;
+  color: #a85a6a;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#topbar button:hover { background: #ffd0db; }
+#msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.msg {
+  position: relative;
+  max-width: 78%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  line-height: 1.5;
+  font-size: 13px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.msg.me { align-self: flex-end; background: #ffb3c1; color: #5a2b36; border-bottom-right-radius: 4px; }
+.msg.her { align-self: flex-start; background: #fff; border: 1px solid #f0e0d4; border-bottom-left-radius: 4px; }
+/* 删除按钮：hover 显示 */
+.msg .del {
+  display: none;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: #e8a0a8;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.msg:hover .del { display: block; }
+.msg .del:hover { background: #d97a86; }
+/* 思考过程折叠块（推理模型才返回，可展开） */
+.msg .thinking {
+  margin: 0 0 6px;
+  border-left: 3px solid #e0b9c6;
+  background: #fdf2f5;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #9a7a86;
+  text-align: left;
+}
+.msg .thinking summary {
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  list-style: none;
+}
+.msg .thinking summary::before { content: '▸ '; }
+.msg .thinking[open] summary::before { content: '▾ '; }
+.msg .thinking > div {
+  margin-top: 4px;
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow-y: auto;
+  opacity: .9;
+}
+#row {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid #f0e0d4;
+  background: #fff;
+}
+#clearBtn {
+  border: none;
+  background: #f3e7dd;
+  color: #9a7a66;
+  border-radius: 18px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#clearBtn:hover { background: #ecd9cb; }
+#input {
+  flex: 1;
+  border: 1px solid #e8d5c8;
+  border-radius: 18px;
+  padding: 8px 14px;
+  font-size: 13px;
+  outline: none;
+  background: #fdf6f0;
+  color: #5a463a;
+}
+#input:focus { border-color: #ff9db4; }
+#send {
+  border: none;
+  background: #ff9db4;
+  color: #fff;
+  border-radius: 18px;
+  padding: 8px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#send:hover { background: #ff85a0; }
+#typing { display: none; padding: 4px 14px; font-size: 12px; color: #b59a8a; }
+#typing.on { display: block; }
+/* 重命名模态框（Electron 渲染进程不支持 window.prompt，用页面内模态框代替） */
+#modalMask {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(90, 70, 58, 0.35);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+}
+#modalMask.on { display: flex; }
+#renameBox {
+  width: 280px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(90, 70, 58, 0.2);
+}
+#renameBox h3 { font-size: 14px; color: #5a463a; margin-bottom: 10px; }
+#renameInput {
+  width: 100%;
+  border: 1px solid #e8d5c8;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+  background: #fdf6f0;
+  color: #5a463a;
+  box-sizing: border-box;
+}
+#renameInput:focus { border-color: #ff9db4; }
+#renameBtns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+#renameBtns button {
+  border: none;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#renameCancel { background: #f3e7dd; color: #9a7a66; }
+#renameCancel:hover { background: #ecd9cb; }
+#renameOk { background: #ff9db4; color: #fff; }
+#renameOk:hover { background: #ff85a0; }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <select id="sessSel" title="切换会话"></select>
+  <button id="renameBtn" title="重命名当前会话">重命名</button>
+  <button id="delBtn" title="删除当前会话（记录+记忆）">删除</button>
+  <button id="newBtn" title="开启新会话">＋新会话</button>
+</div>
+<div id="msgs"></div>
+<div id="typing">正在想…</div>
+<div id="row">
+  <button id="clearBtn" title="清空当前会话的聊天记录与记忆">清空</button>
+  <input id="input" placeholder="说点什么…" />
+  <button id="send">发送</button>
+</div>
+<div id="modalMask">
+  <div id="renameBox">
+    <h3>重命名会话</h3>
+    <input id="renameInput" maxlength="30" placeholder="输入新的会话名称" />
+    <div id="renameBtns">
+      <button id="renameCancel">取消</button>
+      <button id="renameOk">确定</button>
+    </div>
+  </div>
+</div>
+<script>
+const msgs = document.getElementById('msgs');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const typing = document.getElementById('typing');
+const sessSel = document.getElementById('sessSel');
+const newBtn = document.getElementById('newBtn');
+const renameBtn = document.getElementById('renameBtn');
+const delBtn = document.getElementById('delBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+let activeSid = null;     // 当前会话 id
+let lastKey = '';         // 防抖指纹：sid|末条|长度
+
+// 角色切换 / 会话切换时主进程推送：立即刷新
+let ipcRenderer = null;
+try { ipcRenderer = require('electron').ipcRenderer; } catch (e) {}
+// 通知主进程：当前活跃会话已变（让宠物窗同步）
+function notifySessionActive(sid) { try { if (ipcRenderer) ipcRenderer.send('session-active', sid); } catch (e) {} }
+ipcRenderer.on('character-changed', () => { activeSid = null; lastKey = ''; loadSessions(); });
+ipcRenderer.on('session-changed', () => { loadSessions(); });
+
+// ---- 会话列表 ----
+async function loadSessions() {
+  try {
+    const r = await fetch('/api/sessions');
+    const j = await r.json();
+    activeSid = j.active;
+    sessSel.innerHTML = '';
+    (j.sessions || []).forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.name;
+      if (s.id === j.active) o.selected = true;
+      sessSel.appendChild(o);
+    });
+    lastKey = '';
+    await loadHistory();
+  } catch (e) {}
+}
+
+function curSessName() {
+  const o = sessSel.options[sessSel.selectedIndex];
+  return o ? o.textContent : '';
+}
+
+// 下拉切换会话
+sessSel.addEventListener('change', async () => {
+  const id = sessSel.value;
+  try {
+    await fetch('/api/sessions/active', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
+    });
+  } catch (e) {}
+  activeSid = id;
+  lastKey = '';
+  await loadHistory();
+  notifySessionActive(activeSid);
+});
+
+// 新会话
+newBtn.addEventListener('click', async () => {
+  try {
+    await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    await loadSessions();
+    notifySessionActive(activeSid);
+  } catch (e) {}
+});
+
+// 重命名（Electron 渲染进程不支持 window.prompt，改用页面内模态框）
+const modalMask = document.getElementById('modalMask');
+const renameInput = document.getElementById('renameInput');
+const renameOk = document.getElementById('renameOk');
+const renameCancel = document.getElementById('renameCancel');
+let renaming = false;
+
+function openRename() {
+  if (!activeSid) return;
+  renameInput.value = curSessName();
+  modalMask.classList.add('on');
+  renameInput.focus();
+  renameInput.select();
+  renaming = true;
+}
+function closeRename() {
+  modalMask.classList.remove('on');
+  renaming = false;
+}
+async function doRename() {
+  if (!renaming || !activeSid) return;
+  const name = renameInput.value.trim();
+  if (!name) { renameInput.focus(); return; }
+  renaming = false;
+  closeRename();
+  try {
+    await fetch('/api/sessions/rename', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeSid, name })
+    });
+    await loadSessions();
+  } catch (e) {}
+}
+renameBtn.addEventListener('click', openRename);
+renameCancel.addEventListener('click', closeRename);
+renameOk.addEventListener('click', doRename);
+modalMask.addEventListener('click', (e) => { if (e.target === modalMask) closeRename(); });
+renameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); doRename(); }
+  else if (e.key === 'Escape') closeRename();
+});
+
+// 删除会话（记录+记忆）
+delBtn.addEventListener('click', async () => {
+  if (!activeSid) return;
+  if (!confirm('删除当前会话？该会话的聊天记录和记忆将一并删除（至少保留一个会话）。')) return;
+  try {
+    const r = await fetch('/api/sessions/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeSid })
+    });
+    const j = await r.json();
+    if (j.error) { alert(j.error); return; }
+    activeSid = j.active;
+    await loadSessions();
+    notifySessionActive(activeSid);
+  } catch (e) {}
+});
+
+// 清空（记录+记忆，保留会话本身）
+clearBtn.addEventListener('click', async () => {
+  if (!activeSid) return;
+  if (!confirm('清空当前会话的聊天记录和记忆？（会话本身保留）')) return;
+  try {
+    await fetch('/api/sessions/clear', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeSid })
+    });
+    lastKey = '';
+    await loadHistory();
+  } catch (e) {}
+});
+
+// ---- 消息渲染 ----
+function addMsg(role, text, idx, reasoning) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + (role === 'me' ? 'me' : 'her');
+  // 思考过程：有才展示，默认折叠
+  const clean = String(text || '').replace(/[\[【][^\]】]{1,8}[\]】]/g, '').trim();
+  if (reasoning && String(reasoning).trim()) {
+    const det = document.createElement('details');
+    det.className = 'thinking';
+    const sum = document.createElement('summary');
+    sum.textContent = '思考过程';
+    const body = document.createElement('div');
+    body.textContent = String(reasoning).trim();
+    det.appendChild(sum);
+    det.appendChild(body);
+    d.appendChild(det);
+  }
+  d.appendChild(document.createTextNode(clean));
+  if (idx !== undefined && idx !== null) {
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.title = '删除这条记录';
+    del.textContent = '×';
+    del.addEventListener('click', () => deleteMsg(idx, d));
+    d.appendChild(del);
+  }
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
+}
+
+async function deleteMsg(idx, el) {
+  try {
+    const r = await fetch('/api/chat/message/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index: idx, sessionId: activeSid })
+    });
+    const j = await r.json();
+    if (j.ok) {
+      el.remove();
+      lastKey = '';  // 强制下次全量重建
+    }
+  } catch (e) {}
+}
+
+async function loadHistory() {
+  if (!activeSid) return;
+  try {
+    const r = await fetch('/api/chat/history?sessionId=' + encodeURIComponent(activeSid));
+    const j = await r.json();
+    const msgs2 = j.messages || [];
+    const last = msgs2[msgs2.length - 1];
+    const fp = last ? ((last.role || '') + '|' + (last.content || '') + '|' + (last.reasoning || '')) : 'EMPTY';
+    const key = activeSid + '|' + fp + '|' + msgs2.length;
+    if (key === lastKey) return;  // 无变化，不动
+    msgs.innerHTML = '';
+    msgs2.forEach((m, i) => addMsg(m.role === 'user' ? 'me' : 'her', m.content, i, m.reasoning));
+    lastKey = key;
+  } catch (e) {}
+}
+
+async function send() {
+  const t = input.value.trim();
+  if (!t || !activeSid) return;
+  input.value = '';
+  typing.classList.add('on');
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: t, sessionId: activeSid })
+    });
+    const j = await r.json();
+    if (j.error) { addMsg('her', '（' + j.error + '）'); return; }
+    await loadHistory();
+  } catch (e) {
+    addMsg('me', t);
+    addMsg('her', '（连接失败）');
+  } finally {
+    typing.classList.remove('on');
+  }
+}
+
+sendBtn.addEventListener('click', send);
+input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+loadSessions();
+// 服务器端历史变化（主窗口聊天/自主话题）：2s 轮询兜底
+setInterval(loadHistory, 2000);
+</script>
+</body>
+</html>

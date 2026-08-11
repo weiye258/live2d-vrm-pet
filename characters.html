@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>角色</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: linear-gradient(160deg, #2a1b3d 0%, #3d2b52 60%, #4a3059 100%);
+  color: #e8ddf0;
+  min-height: 100vh;
+  padding: 18px;
+}
+h1 { font-size: 17px; margin-bottom: 14px; color: #ffd6e8; letter-spacing: 1px; }
+.mini-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e8ddf0;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mini-btn:hover { background: rgba(255, 255, 255, 0.18); }
+.mini-btn.primary {
+  background: rgba(255, 157, 180, 0.3);
+  border-color: #ff9db4;
+  color: #ffe4ee;
+}
+.mini-btn.primary:hover { background: rgba(255, 157, 180, 0.45); }
+/* 角色卡片 */
+.char-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.char-card:hover { background: rgba(255, 255, 255, 0.1); }
+.char-card.on {
+  background: rgba(255, 157, 180, 0.16);
+  border-color: #ff9db4;
+}
+.cc-info { flex: 1; min-width: 0; }
+.cc-row { display: flex; align-items: center; gap: 8px; }
+.mood-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.mood-dot.pink { background: #ff9db4; }
+.mood-dot.blue { background: #7fb8ff; }
+.mood-dot.purple { background: #c79bff; }
+.mood-dot.amber { background: #ffc97a; }
+.mood-dot.green { background: #8fe3a8; }
+.cn { font-size: 14px; font-weight: 600; color: #ffd6e8; }
+.cd {
+  font-size: 11px; color: #a893b8;
+  margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cc-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.cc-act {
+  width: 28px; height: 28px; border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #c9b8d8; font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.cc-act:hover { background: rgba(255, 157, 180, 0.3); color: #fff; }
+.cc-act.del:hover { background: rgba(255, 90, 120, 0.35); }
+/* 表单 */
+#charForm {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 14px;
+}
+.cf-title { font-size: 14px; color: #ffb9d0; font-weight: 600; margin-bottom: 10px; }
+input, textarea, select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e8ddf0;
+  font-size: 13px;
+  margin-bottom: 8px;
+  outline: none;
+  font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { border-color: #ff9db4; }
+textarea { resize: vertical; }
+select option { background: #2a1b3d; }
+.form-btns { display: flex; gap: 8px; margin-top: 4px; }
+.form-btns .mini-btn { flex: 1; }
+#charList { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<h1>🎭 角色</h1>
+<div id="charList"></div>
+<button class="mini-btn primary" id="charAddBtn" style="width:100%">＋ 新建角色</button>
+
+<div id="charForm" class="sub-form" style="display:none">
+  <div class="cf-title" id="cfTitle">新建角色</div>
+  <input id="cfName" placeholder="标识 name（唯一，如 xiaoye）" />
+  <input id="cfLabel" placeholder="显示名（如 小夜）" />
+  <textarea id="cfDesc" placeholder="角色描述（外貌、背景、身份…）" rows="3"></textarea>
+  <input id="cfPersonality" placeholder="性格（如：粘人、细心、爱观察）" />
+  <input id="cfScenario" placeholder="场景设定" />
+  <textarea id="cfFirstMes" placeholder="开场白（如：嗨，主人~）" rows="2"></textarea>
+  <select id="cfModel"><option value="">-- 默认模型 --</option></select>
+  <select id="cfTtsSpeaker"><option value="">-- 角色音色（默认全局） --</option></select>
+  <input id="cfMemoryInterval" type="number" min="1" max="200" placeholder="记忆阈值：每多少条对话自动沉淀一次（如 20）" />
+  <select id="cfMood">
+    <option value="pink">粉色</option>
+    <option value="blue">蓝色</option>
+    <option value="purple">紫色</option>
+    <option value="amber">琥珀</option>
+    <option value="green">绿色</option>
+  </select>
+  <textarea id="cfRules" placeholder="规则（一行一条）" rows="3"></textarea>
+  <div class="form-btns">
+    <button class="mini-btn primary" id="cfSave">保存</button>
+    <button class="mini-btn" id="cfCancel">取消</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let characters = [];
+let activeCharName = '';
+let editingCharName = null;
+
+async function loadCharacters() {
+  try {
+    const r = await fetch('/api/characters');
+    const j = await r.json();
+    characters = j.list || [];
+    activeCharName = j.active || '';
+    renderCharList();
+  } catch (e) {}
+}
+
+function renderCharList() {
+  const box = $('charList');
+  box.innerHTML = '';
+  characters.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'char-card' + (c.name === activeCharName ? ' on' : '');
+    const moodClass = c.mood || 'pink';
+    card.innerHTML =
+      '<div class="cc-info">' +
+        '<div class="cc-row">' +
+          '<span class="mood-dot ' + moodClass + '"></span>' +
+          '<span class="cn">' + (c.label || c.name) + '</span>' +
+        '</div>' +
+        '<div class="cd">' + (c.desc || '') + '</div>' +
+      '</div>' +
+      '<div class="cc-actions">' +
+        '<button class="cc-act" data-act="edit" title="编辑人设">✎</button>' +
+        '<button class="cc-act del" data-act="del" title="删除">✕</button>' +
+      '</div>';
+    // 点击卡片主体 → 切换角色
+    card.querySelector('.cc-info').addEventListener('click', async () => {
+      const r = await fetch('/api/characters/active', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: c.name })
+      });
+      const j = await r.json();
+      if (j.ok) {
+        activeCharName = c.name;
+        renderCharList();
+        // 通知主窗口重载模型 + 聊天窗立即刷新历史（切角色也要驱动，不只是保存时）
+        try { window.panelIPC?.notifyModelChanged(); } catch (e) {}
+      }
+    });
+    card.querySelector('[data-act="edit"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      editCharacter(c.name);
+    });
+    card.querySelector('[data-act="del"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteCharacter(c.name);
+    });
+    box.appendChild(card);
+  });
+}
+
+async function editCharacter(name) {
+  try {
+    const r = await fetch('/api/characters/detail?name=' + encodeURIComponent(name));
+    const c = await r.json();
+    if (!c || c.error) { alert('加载失败: ' + (c?.error || '未知错误')); return; }
+    editingCharName = name;
+    $('cfTitle').textContent = '编辑: ' + (c.label || name);
+    $('cfName').value = c.name || '';
+    $('cfName').readOnly = true;
+    $('cfLabel').value = c.label || '';
+    $('cfDesc').value = c.description || '';
+    $('cfPersonality').value = c.personality || '';
+    $('cfScenario').value = c.scenario || '';
+    $('cfFirstMes').value = c.first_mes || '';
+    $('cfModel').value = c.model || '';
+    $('cfTtsSpeaker').value = c.tts_speaker || '';
+    $('cfMemoryInterval').value = c.memory_interval || 20;
+    $('cfMood').value = c.mood || 'pink';
+    $('cfRules').value = (c.rules || []).join('\n');
+    $('charForm').style.display = 'block';
+    $('charForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) { alert('加载失败: ' + e.message); }
+}
+
+async function deleteCharacter(name) {
+  if (!confirm('确定删除角色「' + name + '」？此操作不可撤销。')) return;
+  try {
+    const r = await fetch('/api/characters?name=' + encodeURIComponent(name), { method: 'DELETE' });
+    const j = await r.json();
+    if (!j.ok) { alert('删除失败: ' + (j.error || '')); return; }
+    loadCharacters();
+  } catch (e) { alert('删除失败: ' + e.message); }
+}
+
+$('charAddBtn').addEventListener('click', () => {
+  editingCharName = null;
+  $('cfTitle').textContent = '新建角色';
+  $('cfName').readOnly = false;
+  $('cfName').value = '';
+  $('cfLabel').value = '';
+  $('cfDesc').value = '';
+  $('cfPersonality').value = '';
+  $('cfScenario').value = '';
+  $('cfFirstMes').value = '';
+  $('cfModel').value = '';
+  $('cfTtsSpeaker').value = '';
+  $('cfMemoryInterval').value = 20;
+  $('cfMood').value = 'pink';
+  $('cfRules').value = '';
+  $('charForm').style.display = 'block';
+  $('charForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+
+$('cfCancel').addEventListener('click', () => { $('charForm').style.display = 'none'; });
+
+$('cfSave').addEventListener('click', async () => {
+  const body = {
+    name: $('cfName').value.trim(),
+    label: $('cfLabel').value.trim(),
+    description: $('cfDesc').value.trim(),
+    personality: $('cfPersonality').value.trim(),
+    scenario: $('cfScenario').value.trim(),
+    first_mes: $('cfFirstMes').value.trim(),
+    model: $('cfModel').value,
+    tts_speaker: $('cfTtsSpeaker').value,
+    memory_interval: parseInt($('cfMemoryInterval').value, 10) || 20,
+    mood: $('cfMood').value,
+    rules: $('cfRules').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+  };
+  if (!body.name) { alert('请填写标识 name'); return; }
+  const r = await fetch('/api/characters', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  if (j.ok) {
+    $('charForm').style.display = 'none';
+    loadCharacters();
+    // 通知主窗口重载模型
+    try { window.panelIPC?.notifyModelChanged(); } catch (e) {}
+  } else {
+    alert('保存失败: ' + (j.error || ''));
+  }
+});
+
+// 模型/音色下拉选项
+async function loadOptions() {
+  try {
+    const mr = await fetch('/api/models');
+    const mj = await mr.json();
+    const ms = $('cfModel');
+    ms.innerHTML = '<option value="">-- 默认模型 --</option>';
+    (mj.models || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.path;
+      opt.textContent = m.name;
+      ms.appendChild(opt);
+    });
+  } catch (e) {}
+  try {
+    const tr = await fetch('/api/tts/speakers');
+    const tj = await tr.json();
+    const ts = $('cfTtsSpeaker');
+    ts.innerHTML = '<option value="">-- 角色音色（默认全局） --</option>';
+    (tj.speakers || []).forEach(s => {
+      const val = typeof s === 'string' ? s : (s.voice_id || s.name || s.id || String(s));
+      const label = typeof s === 'string' ? s : (s.name || s.voice_id || String(s));
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      ts.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+loadOptions();
+loadCharacters();
+// 每 5s 静默刷新，编辑中不覆盖
+setInterval(() => {
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
+  loadCharacters();
+}, 5000);
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>控制栏</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  html, body {
+    height: auto; margin: 0; background: transparent; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    user-select: none; -webkit-user-select: none;
+  }
+  body { display: flex; align-items: center; justify-content: center; padding: 0; }
+  /* dock 现在是整个浮窗；覆盖 style.css 里针对宠物窗内嵌的定位 */
+  #dock {
+    position: static !important; transform: none !important; left: auto !important; bottom: auto !important;
+    display: flex; align-items: center; gap: 3px; padding: 4px 5px;
+    background: rgba(14, 8, 22, 0.62);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-pill); backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-soft); cursor: grab;
+  }
+  #dock:active { cursor: grabbing; }
+  #dock .dbtn, #dock .dock-sep, #dock #zoomLabel { cursor: pointer; }
+  /* 收起后的小圆点 */
+  #dot {
+    display: none;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(14, 8, 22, 0.62);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-soft);
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    color: #fff;
+    transition: transform .12s ease;
+  }
+  #dot:hover { transform: scale(1.08); }
+</style>
+</head>
+<body>
+<div id="dock">
+  <button class="dbtn" id="chatBtn" title="聊天窗口（再点关闭）">💬</button>
+  <button class="dbtn" id="memBtn" title="记忆窗口（再点关闭）">🧠</button>
+  <button class="dbtn" id="settingsBtn" title="设置窗口（再点关闭）">⚙</button>
+  <div class="dock-sep"></div>
+  <button class="dbtn" id="voiceBtn" title="语音">🎤</button>
+  <button class="dbtn" id="charBtn" title="角色">🎭</button>
+  <div class="dock-sep"></div>
+  <button class="dbtn" id="ghostBtn" title="透视：鼠标可穿透模型，操作后面的文件">👁</button>
+  <button class="dbtn sm" id="zoomOutBtn" title="缩小">−</button>
+  <span id="zoomLabel">100%</span>
+  <button class="dbtn sm" id="zoomInBtn" title="放大">+</button>
+  <div class="dock-sep"></div>
+  <button class="dbtn" id="collapseBtn" title="收起成一个小圆点">—</button>
+</div>
+<div id="dot" title="点我展开控制栏">✦</div>
+<script>
+  const { ipcRenderer } = require('electron');
+  const $ = id => document.getElementById(id);
+  const send = (name, arg) => { try { ipcRenderer.send(name, arg); } catch (e) {} };
+
+  $('chatBtn').addEventListener('click', () => send('open-chat-window'));
+  $('memBtn').addEventListener('click', () => send('open-memory-window'));
+  $('settingsBtn').addEventListener('click', () => send('open-settings-window'));
+  $('charBtn').addEventListener('click', () => send('open-characters-window'));
+  $('voiceBtn').addEventListener('click', () => send('toggle-voice'));
+  $('ghostBtn').addEventListener('click', () => send('toggle-ghost'));
+  $('zoomInBtn').addEventListener('click', () => send('zoom', 0.1));
+  $('zoomOutBtn').addEventListener('click', () => send('zoom', -0.1));
+
+  // 收起为小圆点 / 点击圆点展开（窗口尺寸由主进程调整）
+  const dockEl = document.getElementById('dock');
+  const dotEl = document.getElementById('dot');
+  $('collapseBtn').addEventListener('click', () => {
+    dockEl.style.display = 'none';
+    dotEl.style.display = 'flex';
+    send('dock-collapse');
+  });
+  // 小圆点：拖动能移动 dock；几乎没动的松手视为点击 → 展开
+  // 展开/收起状态切换由主进程改窗口尺寸，这里只管 UI 与位置
+  let dotPress = null;
+  function expandDock() {
+    dockEl.style.display = 'flex';
+    dotEl.style.display = 'none';
+    send('dock-expand');
+  }
+
+  // 主进程回报状态 → 高亮
+  ipcRenderer.on('win-state', (e, st) => {
+    const map = { chat: 'chatBtn', settings: 'settingsBtn', memory: 'memBtn', characters: 'charBtn' };
+    Object.keys(map).forEach(k => { const b = $(map[k]); if (b) b.classList.toggle('active', !!st[k]); });
+  });
+  ipcRenderer.on('ghost-state', (e, v) => { const b = $('ghostBtn'); if (b) b.classList.toggle('active', !!v); });
+  ipcRenderer.on('voice-state', (e, v) => { const b = $('voiceBtn'); if (b) b.classList.toggle('active', !!v); });
+  ipcRenderer.on('zoom-state', (e, pct) => { const l = $('zoomLabel'); if (l) l.textContent = pct + '%'; });
+
+  // 拖拽整个浮窗（透明窗下 -webkit-app-region 不可靠，用 IPC；按钮区域不触发拖拽）
+  // 小圆点也参与拖拽：按下即进入拖动，松手时若几乎没移动则视为点击展开
+  let dragging = false;
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.dbtn') || e.target.closest('.dock-sep') || e.target.id === 'zoomLabel') return;
+    dotPress = e.target.id === 'dot' ? { x: e.clientX, y: e.clientY } : null;
+    dragging = true; send('dock-drag-start'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', () => { if (dragging) send('dock-drag-move'); });
+  document.addEventListener('mouseup', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    send('dock-drag-end');
+    if (dotPress && Math.hypot(e.clientX - dotPress.x, e.clientY - dotPress.y) < 5) {
+      expandDock();   // 点击小圆点 → 展开
+    }
+    dotPress = null;
+  });
+</script>
+</body>
+</html>
