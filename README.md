@@ -134,6 +134,6 @@ A: 检查 API Key 是否正确、网络是否可达。renderer.log 有调试日�
 
 ## 开源许可
 
-MIT License。详见 [LICENSE](LICENSE)。
+仅供个人学习使用，**禁止商用与二次分发**。详见 [LICENSE](LICENSE)。
 
 **注意**：`models/blhx_z23/`（碧蓝航线角色）为商业游戏资产，仅供个人学习，**请勿分发**。仓库默认通过 .gitignore 排除该目录。
